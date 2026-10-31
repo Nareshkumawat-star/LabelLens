@@ -268,7 +268,7 @@ function SmallScanVideo() {
         {/* Simulated OCR Detection Tag */}
         <div className="absolute top-3 left-8 flex items-center gap-1.5 rounded-full bg-black/70 px-2 py-0.5 text-[10px] font-mono text-emerald-400 border border-emerald-500/30 backdrop-blur-xs">
           <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-ping" />
-          <span>OPTICAL RADAR • GEMMA AI</span>
+          <span>OPTICAL RADAR • LABELLENS LIVE</span>
         </div>
 
         {/* Nutrition Detection Box */}
@@ -530,7 +530,7 @@ export function InteractiveLabelSimulator() {
           </div>
           <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/25 self-start sm:self-auto">
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            Live AI Vision Demo
+            LabelLens Live Scanner Demo
           </span>
         </div>
 
@@ -562,7 +562,7 @@ export function InteractiveLabelSimulator() {
           <div className="lg:col-span-5 space-y-2.5">
             <SmallScanVideo />
             <p className="text-[11px] text-muted-foreground leading-relaxed text-center sm:text-left">
-              Watch how multimodal vision reads printed package geometry in real-time, isolating ingredients from AI context before calculating edibility.
+              Watch how LabelLens reads printed package geometry in real-time, isolating ingredients directly from physical packaging before calculating edibility.
             </p>
           </div>
         </div>

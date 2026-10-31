@@ -53,7 +53,7 @@ export default function IndexPage() {
               {/* Eyebrow Pill */}
               <div className="inline-flex items-center gap-2 rounded-full border border-border/70 bg-muted/40 px-3.5 py-1 text-xs font-semibold backdrop-blur-xs">
                 <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="text-foreground font-semibold">Multimodal Vision AI</span>
+                <span className="text-foreground font-semibold">LabelLens Live Food Scanner</span>
                 <span className="text-muted-foreground/40">•</span>
                 <span className="text-emerald-700 dark:text-emerald-400 font-semibold">Truth Mode Active</span>
               </div>
@@ -97,16 +97,16 @@ export default function IndexPage() {
             {/* Quick Trust Specs */}
             <div className="flex flex-wrap md:flex-col items-start md:items-end gap-2.5 shrink-0 pt-2 md:pt-0">
               <div className="rounded-xl border border-border/70 bg-card/70 backdrop-blur-xs p-3 shadow-2xs text-left md:text-right min-w-[170px]">
-                <div className="text-[11px] font-medium text-muted-foreground">Detection Vision</div>
-                <div className="text-sm font-bold text-foreground">Gemma Multimodal</div>
+                <div className="text-[11px] font-medium text-muted-foreground">Detection System</div>
+                <div className="text-sm font-bold text-foreground">LabelLens Live Optical Radar</div>
               </div>
               <div className="rounded-xl border border-border/70 bg-card/70 backdrop-blur-xs p-3 shadow-2xs text-left md:text-right min-w-[170px]">
                 <div className="text-[11px] font-medium text-muted-foreground">Privacy Protection</div>
                 <div className="text-sm font-bold tabular-nums text-emerald-700 dark:text-emerald-400">100% In-Memory</div>
               </div>
               <div className="rounded-xl border border-border/70 bg-card/70 backdrop-blur-xs p-3 shadow-2xs text-left md:text-right min-w-[170px]">
-                <div className="text-[11px] font-medium text-muted-foreground">AI Hallucination</div>
-                <div className="text-sm font-bold text-foreground">Strict 0% Tolerance</div>
+                <div className="text-[11px] font-medium text-muted-foreground">Ingredient Accuracy</div>
+                <div className="text-sm font-bold text-foreground">100% Verbatim Grounded</div>
               </div>
             </div>
           </div>
@@ -143,7 +143,7 @@ export default function IndexPage() {
                   <span className="text-sm font-bold text-foreground">Verbatim OCR</span>
                 </div>
                 <p className="text-xs text-muted-foreground leading-relaxed pl-8">
-                  Extracts physical text as-is. Printed ingredients are isolated from AI context.
+                  Extracts physical text as-is. Printed ingredients are verified directly from packaging.
                 </p>
               </div>
 
@@ -223,7 +223,7 @@ export default function IndexPage() {
             </p>
           </div>
           <div className="flex items-center gap-3 shrink-0 font-medium font-mono text-[11px]">
-            <span>Gemma Multimodal + Watermelon UI</span>
+            <span>LabelLens Live Food Scanner + Watermelon UI</span>
           </div>
         </footer>
       </div>

@@ -1,16 +1,53 @@
 "use client"
 
 import * as React from "react"
-import { ShieldCheck, Eye, Sparkles, Lock, Cpu, AlertTriangle } from "lucide-react"
+import {
+  ShieldCheck,
+  Eye,
+  Sparkles,
+  Lock,
+  AlertTriangle,
+  ScanLine,
+  CheckCircle2,
+} from "lucide-react"
 import { Marquee } from "./marquee"
 
 const TICKER_ITEMS = [
-  { label: "Gemma Multimodal Vision", icon: Cpu, color: "text-blue-600 dark:text-blue-400" },
-  { label: "Label Truth Mode (Zero AI Hallucination)", icon: Eye, color: "text-emerald-600 dark:text-emerald-400" },
-  { label: "Optical Character Recognition (OCR)", icon: Sparkles, color: "text-purple-600 dark:text-purple-400" },
-  { label: "Critical Allergen Alert System", icon: AlertTriangle, color: "text-amber-600 dark:text-amber-400" },
-  { label: "Synthetic Additive & Preservative Radar", icon: ShieldCheck, color: "text-rose-600 dark:text-rose-400" },
-  { label: "Private by Design — Zero Image Storage", icon: Lock, color: "text-sky-600 dark:text-sky-400" },
+  {
+    label: "LabelLens Live — Verifies Real Ingredients Printed on Packaging",
+    icon: ScanLine,
+    color: "text-emerald-600 dark:text-emerald-400",
+  },
+  {
+    label: "LabelLens Live — Unmasks Hidden Sugars, Maltodextrin & Syrups",
+    icon: Sparkles,
+    color: "text-amber-600 dark:text-amber-400",
+  },
+  {
+    label: "LabelLens Live — Flags Synthetic Preservatives, E-Numbers & Petroleum Dyes",
+    icon: ShieldCheck,
+    color: "text-rose-600 dark:text-rose-400",
+  },
+  {
+    label: "LabelLens Live — Instant Big-9 Food Allergen Warnings",
+    icon: AlertTriangle,
+    color: "text-amber-600 dark:text-amber-400",
+  },
+  {
+    label: "LabelLens Live — 100% Verbatim Physical Nutrition Table Extraction",
+    icon: Eye,
+    color: "text-teal-600 dark:text-teal-400",
+  },
+  {
+    label: "LabelLens Live — Calculates 'Is It Perfect to Eat?' 0–100 Purity Score",
+    icon: CheckCircle2,
+    color: "text-emerald-600 dark:text-emerald-400",
+  },
+  {
+    label: "LabelLens Live — Zero Photo Retention, 100% Private In-Memory Scanning",
+    icon: Lock,
+    color: "text-sky-600 dark:text-sky-400",
+  },
 ]
 
 export function StylishBanner() {
@@ -24,7 +61,7 @@ export function StylishBanner() {
           return (
             <div
               key={idx}
-              className="flex items-center gap-2 rounded-full border bg-background px-3.5 py-1 text-xs font-semibold shadow-2xs transition-colors hover:bg-accent"
+              className="flex items-center gap-2 rounded-full border bg-background px-3.5 py-1 text-xs font-semibold shadow-2xs transition-colors hover:bg-accent shrink-0"
             >
               <Icon className={`h-3.5 w-3.5 ${item.color} shrink-0`} />
               <span className="text-foreground">{item.label}</span>
@@ -35,3 +72,4 @@ export function StylishBanner() {
     </div>
   )
 }
+
