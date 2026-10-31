@@ -8,6 +8,7 @@ import {
   Sparkles,
   History,
   ShieldCheck,
+  ShieldAlert,
   CheckCircle2,
 } from "lucide-react"
 
@@ -21,10 +22,12 @@ import type { ScanRecord } from "@/lib/types"
 
 export default function ScanPage() {
   const [scan, setScan] = React.useState<ScanRecord | null>(null)
+  const [saved, setSaved] = React.useState(true)
   const [refreshKey, setRefreshKey] = React.useState(0)
 
-  const onAnalyzed = (next: ScanRecord) => {
+  const onAnalyzed = (next: ScanRecord, wasSaved: boolean) => {
     setScan(next)
+    setSaved(wasSaved)
     setRefreshKey((k) => k + 1)
   }
 
@@ -34,6 +37,7 @@ export default function ScanPage() {
       const data = await res.json()
       if (res.ok && data.success && data.scan) {
         setScan(data.scan as ScanRecord)
+        setSaved(true)
         window.scrollTo({ top: 0, behavior: "smooth" })
       }
     } catch {
@@ -123,9 +127,11 @@ export default function ScanPage() {
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <Badge variant="outline" className="font-mono text-xs">
-                ID: {scan.id.slice(0, 8)}
-              </Badge>
+              {saved && (
+                <Badge variant="outline" className="font-mono text-xs">
+                  ID: {scan.id.slice(0, 8)}
+                </Badge>
+              )}
               <Button
                 variant="outline"
                 size="sm"
@@ -138,12 +144,29 @@ export default function ScanPage() {
             </div>
           </div>
 
+          {!saved && (
+            <div className="flex flex-wrap items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-800 dark:text-amber-300">
+              <ShieldAlert className="h-3.5 w-3.5 shrink-0" />
+              <span>
+                Guest mode: this report is real, but nothing has been stored. Sign in to keep it in
+                your history.
+              </span>
+              <Link href="/sign-in" className="font-semibold underline underline-offset-2">
+                Sign in
+              </Link>
+            </div>
+          )}
+
           <div className="grid gap-6 lg:grid-cols-3">
             <div className="space-y-6 lg:col-span-2">
               <ReportView report={scan.report} />
             </div>
             <div className="space-y-6">
-              <AskYourLabel key={scan.id} scanId={scan.id} />
+              <AskYourLabel
+                key={scan.id || "guest"}
+                scanId={scan.id}
+                report={saved ? undefined : scan.report}
+              />
             </div>
           </div>
         </section>

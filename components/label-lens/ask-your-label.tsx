@@ -14,13 +14,16 @@ import {
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import type { ScanQuestionRecord } from "@/lib/types"
+import type { ProductReport, ScanQuestionRecord } from "@/lib/types"
 
 type Lang = "en" | "hi"
 type Turn = { question: string; answer: string }
 
 interface Props {
+  /** Saved scan id. Empty for a guest analysis. */
   scanId: string
+  /** Guest mode: pass the report already in the browser instead of a scan id. */
+  report?: ProductReport
   /** When provided (scan detail page) the panel uses it instead of re-fetching. */
   initialQuestions?: ScanQuestionRecord[]
 }
@@ -88,7 +91,8 @@ const COPY: Record<
 /** Number of earlier turns sent as context, most recent last. */
 const CONTEXT_TURNS = 6
 
-export function AskYourLabel({ scanId, initialQuestions }: Props) {
+export function AskYourLabel({ scanId, report, initialQuestions }: Props) {
+  const isGuest = Boolean(report && !scanId)
   const [lang, setLang] = React.useState<Lang>("en")
   const t = COPY[lang]
 
@@ -107,8 +111,16 @@ export function AskYourLabel({ scanId, initialQuestions }: Props) {
   // Restore earlier turns when the caller did not hand them over (e.g. a scan
   // opened from the history strip on /scan).
   React.useEffect(() => {
+    if (isGuest) {
+      setHydrating(false)
+      return
+    }
     if (initialQuestions !== undefined) {
       setHistory(initialQuestions)
+      setHydrating(false)
+      return
+    }
+    if (!scanId) {
       setHydrating(false)
       return
     }
@@ -134,7 +146,7 @@ export function AskYourLabel({ scanId, initialQuestions }: Props) {
     return () => {
       cancelled = true
     }
-  }, [scanId, initialQuestions])
+  }, [scanId, initialQuestions, isGuest])
 
   React.useEffect(() => {
     const el = scrollRef.current
@@ -158,10 +170,18 @@ export function AskYourLabel({ scanId, initialQuestions }: Props) {
         .map(({ question: q, answer: a }) => ({ question: q, answer: a }))
 
       try {
+        const payload: Record<string, unknown> = {
+          question: text,
+          language: lang,
+          history: context,
+        }
+        if (scanId) payload.scanId = scanId
+        else if (report) payload.report = report
+
         const res = await fetch("/api/ask", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ scanId, question: text, language: lang, history: context }),
+          body: JSON.stringify(payload),
         })
 
         const data = await res.json().catch(() => null)
@@ -184,7 +204,7 @@ export function AskYourLabel({ scanId, initialQuestions }: Props) {
         inputRef.current?.focus()
       }
     },
-    [busy, history, lang, scanId, t.notSaved]
+    [busy, history, lang, scanId, report, t.notSaved]
   )
 
   return (

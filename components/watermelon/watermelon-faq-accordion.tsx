@@ -1,37 +1,58 @@
 "use client"
 
 import * as React from "react"
-import { Eye, Layers, Send, Sparkles } from "lucide-react"
+import {
+  ScanLine,
+  CheckCircle2,
+  AlertTriangle,
+  Camera,
+  Lock,
+  MessageSquare,
+} from "lucide-react"
 import { AccordionApp, type AccordionItemData } from "./card-split-accordian"
 
 const ACCORDION_ITEMS: AccordionItemData[] = [
   {
     id: 1,
-    title: "How does Label Truth Mode eliminate AI hallucination?",
-    icon: <Eye className="h-5 w-5 text-emerald-600 dark:text-emerald-400 shrink-0" />,
+    title: "What is LabelLens and how does it work?",
+    icon: <ScanLine className="h-5 w-5 text-emerald-600 dark:text-emerald-400 shrink-0" />,
     content:
-      "Traditional AI often guesses missing ingredients or fabricates marketing claims. LabelLens strictly separates text verbatim printed on packaging from AI-assisted scientific explanations. If text is blurry or cropped, it is explicitly segregated into 'Not Verified'.",
+      "LabelLens is a simple food scanner that helps you see what is really inside packaged food. Take a photo of any food package or ingredient label, and LabelLens reads the printed text to find hidden sugars, artificial chemicals, and tell you if it is clean and safe to eat.",
   },
   {
     id: 2,
-    title: "What criteria flag synthetic additives and allergens?",
-    icon: <Layers className="h-5 w-5 text-blue-600 dark:text-blue-400 shrink-0" />,
+    title: "How does LabelLens check if food is good or healthy to eat?",
+    icon: <CheckCircle2 className="h-5 w-5 text-teal-600 dark:text-teal-400 shrink-0" />,
     content:
-      "Ingredients are parsed against standard regulatory lists for the Big 9 allergens (peanuts, tree nuts, gluten, dairy, soy, eggs, fish, shellfish, sesame), high-fructose corn syrups, synthetic artificial dyes (Red 40, Yellow 5), and artificial sweeteners.",
+      "LabelLens calculates a simple 0 to 100 Purity Score based on the printed ingredients. Real whole-food ingredients increase the score, while hidden sugars (like maltodextrin), chemical preservatives, and artificial dyes lower the score.",
   },
   {
     id: 3,
-    title: "How does multimodal vision operate with privacy-by-design?",
-    icon: <Send className="h-5 w-5 text-purple-600 dark:text-purple-400 shrink-0" />,
+    title: "Can LabelLens warn me about food allergies?",
+    icon: <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0" />,
     content:
-      "Photos of labels are processed strictly in ephemeral memory buffers. Once the multimodal vision model completes generating the structured JSON report, the raw image bytes are purged. Only structured metrics are retained in your local history.",
+      "Yes! LabelLens automatically checks every label for common allergens like peanuts, tree nuts, milk/dairy, eggs, wheat/gluten, soy, fish, shellfish, and sesame. If an allergen is found in the ingredients or printed warning label, you get an immediate alert.",
   },
   {
     id: 4,
-    title: "How do I query specific dietary suitability with Ask Your Label?",
-    icon: <Sparkles className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0" />,
+    title: "How do I scan a food label?",
+    icon: <Camera className="h-5 w-5 text-blue-600 dark:text-blue-400 shrink-0" />,
     content:
-      "After scanning any label, use the 'Ask Your Label' chat drawer. Ask questions such as 'Is this safe for gestational diabetes?', 'Does this have hidden dairy derivatives?', or 'What is the protein-to-calorie ratio?' for grounded answers.",
+      "Click 'Check Food Label Now' or go to the Scan page. You can take a live photo using your phone or webcam, or simply drag and drop any packaging picture from your computer or camera roll.",
+  },
+  {
+    id: 5,
+    title: "Are my food photos kept private?",
+    icon: <Lock className="h-5 w-5 text-sky-600 dark:text-sky-400 shrink-0" />,
+    content:
+      "Yes, 100% private. Photos are only scanned in temporary memory to read the label text and are deleted right away. Your food photos are never stored on any servers or shared with anyone.",
+  },
+  {
+    id: 6,
+    title: "Can I ask questions about my food after scanning?",
+    icon: <MessageSquare className="h-5 w-5 text-purple-600 dark:text-purple-400 shrink-0" />,
+    content:
+      "Yes! After scanning any label, you can use the 'Ask Your Label' chat feature to ask simple questions like 'Is this safe for diabetics?', 'Does this have artificial sweeteners?', or 'Is this vegan?' and get clear, instant answers.",
   },
 ]
 
@@ -41,14 +62,14 @@ export function WatermelonFaqAccordion() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-4">
         <div>
           <h2 className="text-xl font-bold tracking-tight text-foreground">
-            Label Intelligence & Verification Architecture
+            Frequently Asked Questions
           </h2>
           <p className="text-xs text-muted-foreground mt-1">
-            Explore how LabelLens parses nutrition tables, handles ephemeral memory, and enforces verified ground truth.
+            Simple answers to common questions about using LabelLens to scan and understand packaged food.
           </p>
         </div>
         <span className="self-start sm:self-center rounded-full bg-primary/10 px-3 py-1 text-[11px] font-semibold text-primary">
-          Watermelon Card-Split
+          Quick Help & FAQs
         </span>
       </div>
 
@@ -56,3 +77,4 @@ export function WatermelonFaqAccordion() {
     </div>
   )
 }
+

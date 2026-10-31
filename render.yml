@@ -26,5 +26,15 @@ services:
         sync: false
       - key: MONGODB_URI
         sync: false
+      # Clerk (accounts + per-user scan history). Leave unset to run guest-only:
+      # scans still analyze, nothing is stored.
+      - key: NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+        sync: false
+      - key: CLERK_SECRET_KEY
+        sync: false
+      - key: NEXT_PUBLIC_CLERK_SIGN_IN_URL
+        value: /sign-in
+      - key: NEXT_PUBLIC_CLERK_SIGN_UP_URL
+        value: /sign-up
       - key: GEMMA_MODEL
         value: gemini-2.5-flash
