@@ -30,3 +30,7 @@ node_modules/.tmp/
 *.sln
 *.sw?
 .DS_Store
+
+# Binary executables
+*.exe
+bin/

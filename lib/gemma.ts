@@ -7,14 +7,19 @@ import { GoogleGenAI } from "@google/genai"
  *
  * Model selection: the brief targets Gemma 4 image understanding through the
  * Gemini API. Model IDs change and availability differs per key/region, so
- * the ID comes from GEMMA_MODEL. If the configured model rejects image input
- * we surface that error to the caller instead of silently falling back to a
- * different model.
+ * the ID comes from GEMMA_MODEL. We validate the configured model against the
+ * API before any generate call so a retired ID fails fast with a real error
+ * instead of silently falling back to a different model.
  */
+
 const API_KEY = process.env.GEMINI_API_KEY
-const MODEL = process.env.GEMMA_MODEL || "gemini-2.0-flash"
+const MODEL = (process.env.GEMMA_MODEL || "gemini-3.8-flash").trim()
+const VALIDATION_CHAIN = process.env.GEMMA_MODEL_VALIDATION_CHAIN
+  ? process.env.GEMMA_MODEL_VALIDATION_CHAIN.split(",").map((m) => m.trim()).filter(Boolean)
+  : ["gemini-3.8-flash", "gemini-2.0-flash", "gemini-2.5-flash"]
 
 let client: GoogleGenAI | null = null
+let modelIdValidated = false
 
 export class AIConfigError extends Error {
   code = "AI_NOT_CONFIGURED"
@@ -46,11 +51,37 @@ function getClient(): GoogleGenAI {
   return client
 }
 
+/**
+ * Check that one of the configured model IDs is available on this key/region.
+ * Fails fast with a real error if every candidate is retired (e.g. a 404).
+ */
+async function validateModelId(): Promise<void> {
+  if (modelIdValidated) return
+  const ai = getClient()
+  const errors: string[] = []
+
+  for (const candidate of VALIDATION_CHAIN) {
+    try {
+      await ai.models.get({ model: candidate })
+      modelIdValidated = true
+      return
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      errors.push(`${candidate}: ${message}`)
+    }
+  }
+
+  throw new AIConfigError(
+    `No configured model is available on this key/region (GEMMA_MODEL_VALIDATION_CHAIN=${VALIDATION_CHAIN.join(",")}).\nDetails:\n${errors.map((e) => `  - ${e}`).join("\n")}`
+  )
+}
+
 export async function generateFromImage(
   buffer: Buffer,
   mimeType: string,
   prompt: string
 ): Promise<string> {
+  await validateModelId()
   const ai = getClient()
 
   const response = await ai.models.generateContent({
@@ -78,6 +109,7 @@ export async function generateFromImage(
 }
 
 export async function generateText(prompt: string): Promise<string> {
+  await validateModelId()
   const ai = getClient()
 
   const response = await ai.models.generateContent({
