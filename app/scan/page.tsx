@@ -3,7 +3,6 @@
 import * as React from "react"
 import Link from "next/link"
 import {
-  ArrowLeft,
   ScanLine,
   RotateCcw,
   Sparkles,
@@ -44,20 +43,28 @@ export default function ScanPage() {
 
   return (
     <div className="container max-w-6xl space-y-8 py-8 animate-in fade-in-50 duration-200">
-      {/* Navigation Breadcrumb Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-4">
-        <div className="flex items-center gap-2 text-sm">
-          <Button asChild variant="ghost" size="sm" className="-ml-2 h-8 px-2 text-muted-foreground hover:text-foreground">
-            <Link href="/">
-              <ArrowLeft className="mr-1.5 h-4 w-4" /> Home
-            </Link>
-          </Button>
-          <span className="text-muted-foreground/60">/</span>
-          <span className="font-semibold text-foreground">Food Label Scanner</span>
+      {/* Page Title & Context Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4">
+        <div className="space-y-1.5">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-2xs">
+              <ScanLine className="h-5 w-5" />
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-foreground">
+              Food Label Scanner
+            </h1>
+            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/25">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-600 dark:bg-emerald-400 animate-pulse" />
+              In-Memory Truth Verification
+            </span>
+          </div>
+          <p className="text-sm text-muted-foreground max-w-2xl leading-relaxed">
+            Drop or snap a photo of any nutrition table or ingredient list. LabelLens rigorously isolates printed facts directly from physical packaging.
+          </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Button asChild variant="outline" size="sm" className="h-8 gap-1.5 text-xs font-semibold">
+        <div className="flex items-center gap-2 shrink-0">
+          <Button asChild variant="outline" size="sm" className="h-8.5 gap-1.5 text-xs font-semibold">
             <Link href="/history">
               <History className="h-3.5 w-3.5 text-primary" />
               <span>View History</span>
@@ -69,32 +76,13 @@ export default function ScanPage() {
               variant="default"
               size="sm"
               onClick={() => setScan(null)}
-              className="h-8 gap-1.5 text-xs font-bold"
+              className="h-8.5 gap-1.5 text-xs font-bold"
             >
               <RotateCcw className="h-3.5 w-3.5" />
               <span>Scan Another Item</span>
             </Button>
           )}
         </div>
-      </div>
-
-      {/* Page Title & Context Header */}
-      <div className="space-y-1.5">
-        <div className="flex flex-wrap items-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-2xs">
-            <ScanLine className="h-5 w-5" />
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-foreground">
-            Food Label Scanner
-          </h1>
-          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/25">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-600 dark:bg-emerald-400 animate-pulse" />
-            In-Memory Truth Verification
-          </span>
-        </div>
-        <p className="text-sm text-muted-foreground max-w-2xl leading-relaxed">
-          Drop or snap a photo of any nutrition table or ingredient list. LabelLens rigorously isolates printed facts from AI explanations and reveals whether the food is perfect to eat.
-        </p>
       </div>
 
       {/* RECENT SCANS ON TOP */}

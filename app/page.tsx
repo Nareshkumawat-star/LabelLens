@@ -23,12 +23,8 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { StylishBanner } from "@/components/watermelon/stylish-banner"
 import { WatermelonFaqAccordion } from "@/components/watermelon/watermelon-faq-accordion"
-import { InteractiveLabelSimulator } from "@/components/label-lens/interactive-label-simulator"
-import { useSmoothScroll } from "@/components/smooth-scroll"
 
 export default function IndexPage() {
-  const { scrollTo } = useSmoothScroll()
-
   return (
     <div className="relative isolate overflow-hidden">
       {/* Aesthetic Ambient Lighting Glows */}
@@ -82,14 +78,15 @@ export default function IndexPage() {
                 </Button>
 
                 <Button
-                  type="button"
+                  asChild
                   variant="outline"
                   size="lg"
-                  onClick={() => scrollTo("#simulator", -75)}
                   className="h-12 px-5 text-sm font-semibold gap-2 border-border/70 hover:bg-muted/60 transition-all hover:scale-101 cursor-pointer"
                 >
-                  <Eye className="h-4 w-4 text-primary" />
-                  <span>Try Live Simulator</span>
+                  <Link href="/history">
+                    <History className="h-4 w-4 text-primary" />
+                    <span>View Scan History</span>
+                  </Link>
                 </Button>
               </div>
             </div>
@@ -177,12 +174,7 @@ export default function IndexPage() {
           <StylishBanner />
         </header>
 
-        {/* 3. INTERACTIVE SIMULATOR (DIFFERENT MANNER: INTERACTIVE LIVE LABELS, NOT CARDS!) */}
-        <section id="simulator" className="scroll-mt-20">
-          <InteractiveLabelSimulator />
-        </section>
-
-        {/* 4. SECOND PAGE LAUNCHER BANNER */}
+        {/* 3. FOOD SCANNER LAUNCHER BANNER */}
         <section className="relative overflow-hidden rounded-2xl border border-border/80 bg-gradient-to-b from-card/80 to-muted/20 p-8 sm:p-10 shadow-xs backdrop-blur-xs">
           <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="space-y-2 max-w-xl">

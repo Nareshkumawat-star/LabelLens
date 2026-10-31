@@ -104,3 +104,4 @@ export function useSmoothScroll() {
 
   return { lenis, scrollTo }
 }
+
