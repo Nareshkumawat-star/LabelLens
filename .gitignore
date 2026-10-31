@@ -1,0 +1,32 @@
+# Dependencies
+node_modules
+
+# Next.js build outputs
+.next/
+out/
+build/
+
+# Environment files (contains secrets)
+.env
+.env.local
+.env.*.local
+
+# Logs
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# TypeScript build info
+*.tsbuildinfo
+node_modules/.tmp/
+
+# Editor directories
+.vscode/*
+!.vscode/extensions.json
+.idea
+*.suo
+*.ntvsca
+*.njsproj
+*.sln
+*.sw?
+.DS_Store
