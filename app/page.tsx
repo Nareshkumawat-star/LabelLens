@@ -63,8 +63,8 @@ export default function IndexPage() {
               </h1>
 
               <p className="text-base sm:text-lg text-muted-foreground leading-relaxed max-w-2xl">
-                Unmask hidden chemical additives, verify marketing claims against physical packaging, and receive an instant{" "}
-                <strong className="text-foreground font-semibold">&ldquo;Is It Perfect to Eat?&rdquo;</strong> edibility verdict with zero guesswork.
+                Read the printed ingredients, nutrition and warnings exactly as they appear on the pack — with anything the photo could not show reported as{" "}
+                <strong className="text-foreground font-semibold">&ldquo;not readable&rdquo;</strong> instead of guessed.
               </p>
 
               {/* PRIMARY ACTION BUTTONS */}
@@ -164,10 +164,10 @@ export default function IndexPage() {
                   <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/10 text-xs font-bold text-emerald-600 dark:text-emerald-400 font-mono">
                     04
                   </span>
-                  <span className="text-sm font-bold text-foreground">&ldquo;Perfect to Eat?&rdquo;</span>
+                  <span className="text-sm font-bold text-foreground">Truth Mode</span>
                 </div>
                 <p className="text-xs text-muted-foreground leading-relaxed pl-8">
-                  Calculates edibility purity score so you know if it is clean or ultra-processed.
+                  Separates printed facts, AI explanations and unverified gaps. Missing data is never filled in.
                 </p>
               </div>
             </div>

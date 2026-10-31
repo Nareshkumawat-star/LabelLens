@@ -13,6 +13,10 @@ import {
   ArrowRight,
   Info,
   Check,
+  Play,
+  Pause,
+  Volume2,
+  VolumeX,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -177,6 +181,131 @@ const SAMPLES: FoodSample[] = [
   },
 ]
 
+const IMPORTANT_TERMS = [
+  {
+    term: "Maltodextrin & Hidden Sugars",
+    tag: "High Glycemic Spike",
+    tagColor: "text-amber-700 dark:text-amber-400 bg-amber-500/10 border-amber-500/30",
+    description:
+      "Has a glycemic index of 110 (higher than table sugar at 65). Frequently used as a bulk sweetener in products claiming 'Zero Added Sugar'.",
+  },
+  {
+    term: "Chemical Emulsifiers (E471, Polysorbates)",
+    tag: "Gut Barrier Risk",
+    tagColor: "text-rose-700 dark:text-rose-400 bg-rose-500/10 border-rose-500/30",
+    description:
+      "Synthetic binding agents that keep fats and water blended on supermarket shelves. Linked to disruption of healthy intestinal mucosal linings.",
+  },
+  {
+    term: "Petroleum Dyes (Red 40, Yellow 5)",
+    tag: "Synthetic Colorant",
+    tagColor: "text-rose-700 dark:text-rose-400 bg-rose-500/10 border-rose-500/30",
+    description:
+      "Azo food colorings synthesized from coal-tar distillates. Several international health regulators mandate warning notices on packaging.",
+  },
+  {
+    term: "Verbatim OCR Grounding",
+    tag: "Zero Hallucination",
+    tagColor: "text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/30",
+    description:
+      "Rigid visual isolation where printed packaging text is extracted directly without LLM guesswork or generative interpolation.",
+  },
+  {
+    term: "Edibility Purity Rating (0–100)",
+    tag: "Algorithmic Score",
+    tagColor: "text-blue-700 dark:text-blue-400 bg-blue-500/10 border-blue-500/30",
+    description:
+      "A normalized safety score calculating whole food nutrient density penalized by synthetic preservatives, artificial sweeteners, and sodium loads.",
+  },
+]
+
+function SmallScanVideo() {
+  const [isPlaying, setIsPlaying] = React.useState(true)
+  const [isMuted, setIsMuted] = React.useState(true)
+  const videoRef = React.useRef<HTMLVideoElement>(null)
+
+  const togglePlay = () => {
+    if (!videoRef.current) return
+    if (isPlaying) {
+      videoRef.current.pause()
+      setIsPlaying(false)
+    } else {
+      videoRef.current.play()
+      setIsPlaying(true)
+    }
+  }
+
+  const toggleMute = () => {
+    if (!videoRef.current) return
+    videoRef.current.muted = !isMuted
+    setIsMuted(!isMuted)
+  }
+
+  return (
+    <div className="relative overflow-hidden rounded-xl border border-border/80 bg-black/90 shadow-md group">
+      {/* Video Element */}
+      <video
+        ref={videoRef}
+        src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4"
+        autoPlay
+        loop
+        muted={isMuted}
+        playsInline
+        className="w-full aspect-video object-cover opacity-90 transition-opacity group-hover:opacity-100"
+      />
+
+      {/* Futuristic Scan HUD Overlay */}
+      <div className="pointer-events-none absolute inset-0">
+        {/* Corner Brackets */}
+        <div className="absolute top-2.5 left-2.5 h-3.5 w-3.5 border-t-2 border-l-2 border-emerald-400" />
+        <div className="absolute top-2.5 right-2.5 h-3.5 w-3.5 border-t-2 border-r-2 border-emerald-400" />
+        <div className="absolute bottom-2.5 left-2.5 h-3.5 w-3.5 border-b-2 border-l-2 border-emerald-400" />
+        <div className="absolute bottom-2.5 right-2.5 h-3.5 w-3.5 border-b-2 border-r-2 border-emerald-400" />
+
+        {/* Animated Laser Beam */}
+        <div className="absolute inset-x-0 h-0.5 bg-gradient-to-r from-transparent via-emerald-400 to-transparent shadow-[0_0_10px_rgba(52,211,153,0.9)] animate-pulse top-1/2 -translate-y-1/2" />
+
+        {/* Simulated OCR Detection Tag */}
+        <div className="absolute top-3 left-8 flex items-center gap-1.5 rounded-full bg-black/70 px-2 py-0.5 text-[10px] font-mono text-emerald-400 border border-emerald-500/30 backdrop-blur-xs">
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-ping" />
+          <span>OPTICAL RADAR • GEMMA AI</span>
+        </div>
+
+        {/* Nutrition Detection Box */}
+        <div className="absolute bottom-9 left-6 rounded border border-dashed border-emerald-400/80 bg-emerald-500/10 px-2 py-0.5 text-[9px] font-mono text-emerald-300">
+          [VERIFIED: PACKAGING OCR]
+        </div>
+      </div>
+
+      {/* Video Control Bar */}
+      <div className="absolute bottom-0 inset-x-0 flex items-center justify-between p-2.5 bg-gradient-to-t from-black/85 via-black/40 to-transparent">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={togglePlay}
+            aria-label={isPlaying ? "Pause video" : "Play video"}
+            className="flex h-7 w-7 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur-sm hover:bg-white/30 transition-colors cursor-pointer"
+          >
+            {isPlaying ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5 ml-0.5" />}
+          </button>
+          <button
+            type="button"
+            onClick={toggleMute}
+            aria-label={isMuted ? "Unmute audio" : "Mute audio"}
+            className="flex h-7 w-7 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur-sm hover:bg-white/30 transition-colors cursor-pointer"
+          >
+            {isMuted ? <VolumeX className="h-3.5 w-3.5" /> : <Volume2 className="h-3.5 w-3.5" />}
+          </button>
+        </div>
+
+        <span className="text-[10px] font-mono font-medium text-white/80 pr-1">
+          Live Scanner Feed
+        </span>
+      </div>
+    </div>
+  )
+}
+
 export function InteractiveLabelSimulator() {
   const [activeId, setActiveId] = React.useState("snack-bar")
   const activeSample = SAMPLES.find((s) => s.id === activeId) ?? SAMPLES[0]
@@ -329,11 +458,13 @@ export function InteractiveLabelSimulator() {
           <div className={`rounded-xl border-2 ${statusStyles.border} p-4 space-y-2`}>
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                Edibility Verdict
+                Sample Reading
               </span>
               <div className="flex items-center gap-1.5 text-sm font-black text-foreground tabular-nums">
                 <span className={statusStyles.accent}>{activeSample.score}</span>
-                <span className="text-xs text-muted-foreground font-normal">/ 100 Purity Score</span>
+                <span className="text-xs font-muted-foreground font-normal text-muted-foreground">
+                  / 100 (fixed demo sample)
+                </span>
               </div>
             </div>
             <p className="text-xs sm:text-sm font-medium leading-relaxed text-foreground">
@@ -382,6 +513,57 @@ export function InteractiveLabelSimulator() {
                 <ArrowRight className="h-3 w-3" />
               </Link>
             </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* SECTION EXTENSION: IMPORTANT TERMS (LEFT) & SMALL VIDEO (RIGHT) */}
+      <div className="rounded-2xl border border-border/80 bg-card/60 backdrop-blur-xs p-6 shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b pb-3">
+          <div>
+            <div className="text-[11px] font-bold uppercase tracking-wider text-primary">
+              Essential Nutritional Lexicon
+            </div>
+            <h3 className="text-lg font-black tracking-tight text-foreground">
+              Food Truth Terms & Live Optical Verification
+            </h3>
+          </div>
+          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/25 self-start sm:self-auto">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            Live AI Vision Demo
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+          {/* LEFT SIDE: IMPORTANT TERMS */}
+          <div className="lg:col-span-7 space-y-2.5">
+            {IMPORTANT_TERMS.map((item, idx) => (
+              <div
+                key={idx}
+                className="group rounded-xl border border-border/60 bg-muted/20 hover:bg-muted/40 p-3 transition-colors space-y-1"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-1.5">
+                  <div className="text-xs font-bold text-foreground group-hover:text-primary transition-colors flex items-center gap-1.5">
+                    <span className="h-1.5 w-1.5 rounded-full bg-primary/60" />
+                    {item.term}
+                  </div>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${item.tagColor}`}>
+                    {item.tag}
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground leading-relaxed pl-3">
+                  {item.description}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          {/* RIGHT SIDE: SMALL VIDEO */}
+          <div className="lg:col-span-5 space-y-2.5">
+            <SmallScanVideo />
+            <p className="text-[11px] text-muted-foreground leading-relaxed text-center sm:text-left">
+              Watch how multimodal vision reads printed package geometry in real-time, isolating ingredients from AI context before calculating edibility.
+            </p>
           </div>
         </div>
       </div>
