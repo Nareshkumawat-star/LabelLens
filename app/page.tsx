@@ -44,67 +44,41 @@ export default function IndexPage() {
       <div className="container max-w-6xl space-y-14 py-10">
         {/* 1. HERO SECTION */}
         <header className="relative space-y-8 border-b pb-10">
-          <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
-            <div className="space-y-4 max-w-3xl">
-              {/* Eyebrow Pill */}
-              <div className="inline-flex items-center gap-2 rounded-full border border-border/70 bg-muted/40 px-3.5 py-1 text-xs font-semibold backdrop-blur-xs">
-                <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="text-foreground font-semibold">LabelLens Live Food Scanner</span>
-                <span className="text-muted-foreground/40">•</span>
-                <span className="text-emerald-700 dark:text-emerald-400 font-semibold">Truth Mode Active</span>
-              </div>
+          <div className="space-y-4 max-w-3xl">
+            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight text-foreground leading-[1.1]">
+              Inspect What&apos;s Truly Printed Inside Packaged Food
+            </h1>
 
-              <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight text-foreground leading-[1.1]">
-                Inspect What&apos;s Truly Printed Inside Packaged Food
-              </h1>
+            <p className="text-base sm:text-lg text-muted-foreground leading-relaxed max-w-2xl">
+              Read the printed ingredients, nutrition and warnings exactly as they appear on the pack — with anything the photo could not show reported as{" "}
+              <strong className="text-foreground font-semibold">&ldquo;not readable&rdquo;</strong> instead of guessed.
+            </p>
 
-              <p className="text-base sm:text-lg text-muted-foreground leading-relaxed max-w-2xl">
-                Read the printed ingredients, nutrition and warnings exactly as they appear on the pack — with anything the photo could not show reported as{" "}
-                <strong className="text-foreground font-semibold">&ldquo;not readable&rdquo;</strong> instead of guessed.
-              </p>
+            {/* PRIMARY ACTION BUTTONS */}
+            <div className="flex flex-wrap items-center gap-3 pt-2">
+              <Button
+                asChild
+                size="lg"
+                className="h-12 px-7 text-sm font-bold shadow-md shadow-primary/20 gap-2 cursor-pointer transition-all hover:scale-102"
+              >
+                <Link href="/scan">
+                  <ScanLine className="h-4.5 w-4.5" />
+                  <span>Check Food Label Now</span>
+                  <ArrowRight className="h-4 w-4 ml-0.5 opacity-80" />
+                </Link>
+              </Button>
 
-              {/* PRIMARY ACTION BUTTONS */}
-              <div className="flex flex-wrap items-center gap-3 pt-2">
-                <Button
-                  asChild
-                  size="lg"
-                  className="h-12 px-7 text-sm font-bold shadow-md shadow-primary/20 gap-2 cursor-pointer transition-all hover:scale-102"
-                >
-                  <Link href="/scan">
-                    <ScanLine className="h-4.5 w-4.5" />
-                    <span>Check Food Label Now</span>
-                    <ArrowRight className="h-4 w-4 ml-0.5 opacity-80" />
-                  </Link>
-                </Button>
-
-                <Button
-                  asChild
-                  variant="outline"
-                  size="lg"
-                  className="h-12 px-5 text-sm font-semibold gap-2 border-border/70 hover:bg-muted/60 transition-all hover:scale-101 cursor-pointer"
-                >
-                  <Link href="/history">
-                    <History className="h-4 w-4 text-primary" />
-                    <span>View Scan History</span>
-                  </Link>
-                </Button>
-              </div>
-            </div>
-
-            {/* Quick Trust Specs */}
-            <div className="flex flex-wrap md:flex-col items-start md:items-end gap-2.5 shrink-0 pt-2 md:pt-0">
-              <div className="rounded-xl border border-border/70 bg-card/70 backdrop-blur-xs p-3 shadow-2xs text-left md:text-right min-w-[170px]">
-                <div className="text-[11px] font-medium text-muted-foreground">Detection System</div>
-                <div className="text-sm font-bold text-foreground">LabelLens Live Optical Radar</div>
-              </div>
-              <div className="rounded-xl border border-border/70 bg-card/70 backdrop-blur-xs p-3 shadow-2xs text-left md:text-right min-w-[170px]">
-                <div className="text-[11px] font-medium text-muted-foreground">Privacy Protection</div>
-                <div className="text-sm font-bold tabular-nums text-emerald-700 dark:text-emerald-400">100% In-Memory</div>
-              </div>
-              <div className="rounded-xl border border-border/70 bg-card/70 backdrop-blur-xs p-3 shadow-2xs text-left md:text-right min-w-[170px]">
-                <div className="text-[11px] font-medium text-muted-foreground">Ingredient Accuracy</div>
-                <div className="text-sm font-bold text-foreground">100% Verbatim Grounded</div>
-              </div>
+              <Button
+                asChild
+                variant="outline"
+                size="lg"
+                className="h-12 px-5 text-sm font-semibold gap-2 border-border/70 hover:bg-muted/60 transition-all hover:scale-101 cursor-pointer"
+              >
+                <Link href="/history">
+                  <History className="h-4 w-4 text-primary" />
+                  <span>View Scan History</span>
+                </Link>
+              </Button>
             </div>
           </div>
 
@@ -215,7 +189,7 @@ export default function IndexPage() {
             </p>
           </div>
           <div className="flex items-center gap-3 shrink-0 font-medium font-mono text-[11px]">
-            <span>LabelLens Live Food Scanner + Watermelon UI</span>
+            <span>LabelLens</span>
           </div>
         </footer>
       </div>
