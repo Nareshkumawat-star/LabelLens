@@ -190,12 +190,24 @@ const AskTurnSchema = z.object({
   answer: z.string().max(4000),
 })
 
-/** Request body validation for the Ask Your Label endpoint. */
-export const AskRequestSchema = z.object({
-  scanId: z.string().min(1, "scanId is required"),
-  question: z.string().min(2, "question is too short").max(500),
-  /** Language the answer should be written in. */
-  language: z.enum(["en", "hi"]).optional().default("en"),
-  /** Recent turns, oldest first. Capped so the prompt stays small. */
-  history: z.array(AskTurnSchema).max(6).optional(),
-})
+/** Request body validation for the Ask Your Label endpoint.
+ *
+ * Accounts pass `scanId` and the answer is grounded in the saved scan.
+ * Guests pass the report they already hold in the browser; it is validated
+ * against the report schema so a client cannot smuggle arbitrary instructions
+ * past the grounding rules.
+ */
+export const AskRequestSchema = z
+  .object({
+    scanId: z.string().min(1).max(64).optional(),
+    question: z.string().min(2, "question is too short").max(500),
+    /** Language the answer should be written in. */
+    language: z.enum(["en", "hi"]).optional().default("en"),
+    /** Recent turns, oldest first. Capped so the prompt stays small. */
+    history: z.array(AskTurnSchema).max(6).optional(),
+    /** Guest mode: the already-analyzed report, sent from the browser. */
+    report: ProductReportSchema.optional(),
+  })
+  .refine((v) => Boolean(v.scanId) || Boolean(v.report), {
+    message: "Provide either a scanId or a report.",
+  })

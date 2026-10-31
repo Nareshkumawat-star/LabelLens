@@ -11,7 +11,8 @@ const ALLOWED = ["image/jpeg", "image/png", "image/webp"]
 const MAX_BYTES = 5 * 1024 * 1024
 
 interface Props {
-  onAnalyzed: (scan: ScanRecord) => void
+  /** `saved` is false for guests — the report is real but nothing was stored. */
+  onAnalyzed: (scan: ScanRecord, saved: boolean) => void
 }
 
 type Status = "idle" | "ready" | "analyzing" | "error"
@@ -212,7 +213,7 @@ export function ImageUploader({ onAnalyzed }: Props) {
         return
       }
 
-      onAnalyzed(data.scan as ScanRecord)
+      onAnalyzed(data.scan as ScanRecord, data.saved !== false)
       setStatus("idle")
       setFile(null)
       setPreviewFor(null)

@@ -4,6 +4,7 @@ import { connectMongoDB, isMongoConfigured } from "@/lib/mongodb"
 import { generateFromImage, isAIConfigured, AIConfigError, AIResponseError } from "@/lib/gemma"
 import { buildAnalysisPrompt } from "@/lib/prompts"
 import { parseAIOutput } from "@/lib/schema"
+import { getCurrentUserId } from "@/lib/auth"
 import { Scan } from "@/models/Scan"
 
 export const runtime = "nodejs"
@@ -72,7 +73,26 @@ export async function POST(request: Request) {
   }
   const report = parsed.report
 
-  // 3. Persist the report (never the image).
+  // 3. Persist the report (never the image) — accounts only.
+  // A guest gets the real analysis but nothing is written to the database.
+  const userId = await getCurrentUserId()
+
+  if (!userId) {
+    return NextResponse.json({
+      success: true,
+      saved: false,
+      scan: {
+        id: "",
+        productName: report.productName,
+        brand: report.brand,
+        category: report.category,
+        imageUrl: null,
+        createdAt: new Date().toISOString(),
+        report,
+      },
+    })
+  }
+
   if (!isMongoConfigured()) {
     return fail("MONGODB_URI is not set, so the scan cannot be saved.", "DB_NOT_CONFIGURED", 503)
   }
@@ -80,6 +100,7 @@ export async function POST(request: Request) {
   try {
     await connectMongoDB()
     const doc = await Scan.create({
+      userId,
       productName: report.productName,
       brand: report.brand,
       category: report.category,
@@ -89,6 +110,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
+      saved: true,
       scan: {
         id: String(doc._id),
         productName: report.productName,

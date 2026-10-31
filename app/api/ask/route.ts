@@ -4,6 +4,7 @@ import { connectMongoDB, isMongoConfigured } from "@/lib/mongodb"
 import { generateText, isAIConfigured, AIConfigError } from "@/lib/gemma"
 import { buildAskPrompt, NOT_AVAILABLE_EN, NOT_AVAILABLE_HI } from "@/lib/prompts"
 import { AskRequestSchema } from "@/lib/schema"
+import { getCurrentUserId } from "@/lib/auth"
 import { Scan } from "@/models/Scan"
 import { ScanQuestion } from "@/models/ScanQuestion"
 import type { ProductReport } from "@/lib/types"
@@ -15,12 +16,6 @@ export async function POST(request: Request) {
   if (!isAIConfigured()) {
     return NextResponse.json(
       { success: false, error: "The AI service is not configured.", code: "AI_NOT_CONFIGURED" },
-      { status: 503 }
-    )
-  }
-  if (!isMongoConfigured()) {
-    return NextResponse.json(
-      { success: false, error: "MONGODB_URI is not set.", code: "DB_NOT_CONFIGURED" },
       { status: 503 }
     )
   }
@@ -48,31 +43,57 @@ export async function POST(request: Request) {
     )
   }
 
-  const { scanId, question, language, history } = parsed.data
+  const { scanId, question, language, history, report: guestReport } = parsed.data
 
-  let scan
-  try {
-    await connectMongoDB()
-    scan = await Scan.findById(scanId).lean()
-  } catch {
-    return NextResponse.json(
-      { success: false, error: "Scan not found.", code: "SCAN_NOT_FOUND" },
-      { status: 404 }
-    )
-  }
+  const userId = await getCurrentUserId()
 
-  if (!scan) {
+  let report: ProductReport
+  let canPersist = false
+
+  if (userId && scanId) {
+    // Account owner: load their saved scan. A foreign id is a 404, never another
+    // user's report.
+    if (!isMongoConfigured()) {
+      return NextResponse.json(
+        { success: false, error: "MONGODB_URI is not set.", code: "DB_NOT_CONFIGURED" },
+        { status: 503 }
+      )
+    }
+
+    let scan
+    try {
+      await connectMongoDB()
+      scan = await Scan.findOne({ _id: scanId, userId }).lean()
+    } catch {
+      scan = null
+    }
+
+    if (!scan) {
+      return NextResponse.json(
+        { success: false, error: "Scan not found.", code: "SCAN_NOT_FOUND" },
+        { status: 404 }
+      )
+    }
+
+    report = JSON.parse(JSON.stringify(scan.report)) as ProductReport
+    canPersist = true
+  } else if (!userId && guestReport) {
+    // Guest: answer from the report already on the client. Nothing is stored.
+    report = guestReport
+    canPersist = false
+  } else {
     return NextResponse.json(
-      { success: false, error: "Scan not found.", code: "SCAN_NOT_FOUND" },
-      { status: 404 }
+      {
+        success: false,
+        error: userId ? "scanId is required." : "No scan supplied.",
+        code: "INVALID_BODY",
+      },
+      { status: 400 }
     )
   }
 
   let answer: string
   try {
-    // Lean documents widen optional fields to `undefined`; normalise to null so
-    // the prompt receives a value that matches ProductReport exactly.
-    const report = JSON.parse(JSON.stringify(scan.report)) as ProductReport
     answer = await generateText(buildAskPrompt(question, report, { language, history }))
 
     // Guard against a degenerate empty reply: never show a blank answer.
@@ -93,6 +114,15 @@ export async function POST(request: Request) {
       },
       { status: 502 }
     )
+  }
+
+  // Guests keep the conversation in the browser only; no row is written.
+  if (!canPersist || !scanId) {
+    return NextResponse.json({
+      success: true,
+      persisted: false,
+      question: { id: "", question, answer, createdAt: new Date().toISOString() },
+    })
   }
 
   try {

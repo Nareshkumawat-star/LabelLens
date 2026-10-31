@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 
 import { connectMongoDB, isMongoConfigured } from "@/lib/mongodb"
+import { getCurrentUserId } from "@/lib/auth"
 import { Scan } from "@/models/Scan"
 import { ScanQuestion } from "@/models/ScanQuestion"
 
@@ -14,6 +15,14 @@ export async function GET(_request: Request, { params }: Ctx) {
     return NextResponse.json(
       { success: false, error: "MONGODB_URI is not set.", code: "DB_NOT_CONFIGURED" },
       { status: 503 }
+    )
+  }
+
+  const userId = await getCurrentUserId()
+  if (!userId) {
+    return NextResponse.json(
+      { success: false, error: "Sign in to view saved scans.", code: "UNAUTHENTICATED" },
+      { status: 401 }
     )
   }
 
@@ -31,7 +40,8 @@ export async function GET(_request: Request, { params }: Ctx) {
   }
 
   try {
-    const scan = await Scan.findById(params.id).lean()
+    // Ownership filter: a foreign id behaves exactly like a missing one.
+    const scan = await Scan.findOne({ _id: params.id, userId }).lean()
     if (!scan) {
       return NextResponse.json(
         { success: false, error: "Scan not found.", code: "SCAN_NOT_FOUND" },
@@ -75,9 +85,17 @@ export async function DELETE(_request: Request, { params }: Ctx) {
     )
   }
 
+  const userId = await getCurrentUserId()
+  if (!userId) {
+    return NextResponse.json(
+      { success: false, error: "Sign in to manage saved scans.", code: "UNAUTHENTICATED" },
+      { status: 401 }
+    )
+  }
+
   try {
     await connectMongoDB()
-    const deleted = await Scan.findByIdAndDelete(params.id)
+    const deleted = await Scan.findOneAndDelete({ _id: params.id, userId })
     if (!deleted) {
       return NextResponse.json(
         { success: false, error: "Scan not found.", code: "SCAN_NOT_FOUND" },
