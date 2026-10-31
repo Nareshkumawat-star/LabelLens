@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 
 import { connectMongoDB, isMongoConfigured } from "@/lib/mongodb"
 import { generateText, isAIConfigured, AIConfigError } from "@/lib/gemma"
-import { buildAskPrompt } from "@/lib/prompts"
+import { buildAskPrompt, NOT_AVAILABLE_EN, NOT_AVAILABLE_HI } from "@/lib/prompts"
 import { AskRequestSchema } from "@/lib/schema"
 import { Scan } from "@/models/Scan"
 import { ScanQuestion } from "@/models/ScanQuestion"
@@ -10,8 +10,6 @@ import type { ProductReport } from "@/lib/types"
 
 export const runtime = "nodejs"
 export const maxDuration = 60
-
-const NOT_AVAILABLE = "This information is not available in the scanned label."
 
 export async function POST(request: Request) {
   if (!isAIConfigured()) {
@@ -50,7 +48,7 @@ export async function POST(request: Request) {
     )
   }
 
-  const { scanId, question } = parsed.data
+  const { scanId, question, language, history } = parsed.data
 
   let scan
   try {
@@ -75,7 +73,10 @@ export async function POST(request: Request) {
     // Lean documents widen optional fields to `undefined`; normalise to null so
     // the prompt receives a value that matches ProductReport exactly.
     const report = JSON.parse(JSON.stringify(scan.report)) as ProductReport
-    answer = await generateText(buildAskPrompt(question, report))
+    answer = await generateText(buildAskPrompt(question, report, { language, history }))
+
+    // Guard against a degenerate empty reply: never show a blank answer.
+    if (!answer.trim()) answer = language === "hi" ? NOT_AVAILABLE_HI : NOT_AVAILABLE_EN
   } catch (err) {
     if (err instanceof AIConfigError) {
       return NextResponse.json(
@@ -93,8 +94,6 @@ export async function POST(request: Request) {
       { status: 502 }
     )
   }
-
-  if (!answer.trim()) answer = NOT_AVAILABLE
 
   try {
     const saved = await ScanQuestion.create({ scanId, question, answer })

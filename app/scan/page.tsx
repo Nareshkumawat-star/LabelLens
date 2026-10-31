@@ -155,7 +155,7 @@ export default function ScanPage() {
               <ReportView report={scan.report} />
             </div>
             <div className="space-y-6">
-              <AskYourLabel scanId={scan.id} />
+              <AskYourLabel key={scan.id} scanId={scan.id} />
             </div>
           </div>
         </section>

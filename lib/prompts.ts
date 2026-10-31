@@ -41,13 +41,17 @@ Return exactly this shape:
 }
 
 Rules — follow them exactly:
+- Read only what is physically legible in this photograph. You have no other source of truth.
+- Do NOT use general knowledge, brand memory, or typical recipes. If the photo does not show sugar, you must not report sugar, even if this kind of product usually contains it.
 - "onLabel" holds text that is literally printed on the package. Copy it verbatim.
 - "ingredients[].sourceText" must be the printed text for that ingredient. "purpose" and "explanation" are your own plain-language description, not label text.
 - Never invent an ingredient, nutrition value, allergen declaration, or warning.
-- Use null for any value you cannot read. Do not guess numbers.
-- List blurry, cropped or illegible areas in "unreadableInformation".
-- List sections that simply are not present on this label in "missingInformation".
-- Do not state that the product is safe or unsafe. Do not give medical advice.
+- Use null for any value you cannot read or that is not printed. Never write "N/A", "unknown", "-" or 0 as a stand-in for a missing value — use null.
+- If a panel is cropped, blurry or out of frame, set the matching flag to false ("ingredientsListed", "allergensListed", "nutritionVisible"), return empty arrays / nulls for its contents, and describe the problem in "unreadableInformation" (for example: "Nutrition panel cut off on the right edge").
+- List sections that are simply not present on this label in "missingInformation".
+- Never fill an empty field to make the report look complete. A short honest report is correct.
+- "summary" must only restate what was read, and must say so when little could be read.
+- Do not state that the product is safe or unsafe, healthy or unhealthy. Do not give medical advice.
 - Keep "summary" to 2-4 plain-language sentences.`
 }
 

@@ -83,6 +83,15 @@
     @apply bg-primary/20 text-foreground;
   }
 
+  html.lenis,
+  html.lenis body {
+    height: auto;
+  }
+
+  html {
+    scroll-behavior: initial;
+  }
+
   /* Subtle, modern scrollbars across browsers */
   ::-webkit-scrollbar {
     width: 6px;

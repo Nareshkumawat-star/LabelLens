@@ -210,10 +210,22 @@ Errors: `400` no/bad body · `413` too large · `415` wrong type · `503` AI or 
 ### `POST /api/ask`
 
 ```json
-{ "scanId": "…", "question": "Does this contain added sugar?" }
+{
+  "scanId": "…",
+  "question": "Does this contain added sugar?",
+  "language": "en",
+  "history": [{ "question": "…", "answer": "…" }]
+}
 ```
 
-Returns `{ success: true, question: { id, question, answer, createdAt } }`.
+`language` is `en` (default) or `hi` — the answer is written in that language. `history` is an
+optional array of up to 6 recent turns from the same scan; it is passed to the model as
+conversational context only, never as a source of new facts. Answers stay grounded in the saved
+report; missing information returns
+*"This information is not available in the scanned label."* (or its Hindi equivalent).
+
+Returns `{ success: true, persisted: true, question: { id, question, answer, createdAt } }`.
+`persisted: false` means the answer was produced but the history row could not be written.
 
 ### `GET /api/scans`
 

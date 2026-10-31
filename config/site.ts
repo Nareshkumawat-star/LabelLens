@@ -9,18 +9,11 @@ export const siteConfig = {
       title: "Home",
       href: "/",
     },
-    {
-      title: "Scan Label",
-      href: "/scan",
-    },
-    {
-      title: "History",
-      href: "/history",
-    },
   ],
   links: {
-    github: "https://github.com/nareshkmt112006/labellens",
+    github: "https://github.com/Nareshkumawat-star/LabelLens",
     twitter: "https://twitter.com",
     docs: "/",
   },
 }
+

@@ -218,7 +218,7 @@ export function InteractiveLabelSimulator() {
             See How LabelLens Unmasks Packaged Food
           </h2>
           <p className="text-xs sm:text-sm text-muted-foreground mt-1 max-w-xl">
-            Choose a real-world product below to see how physical marketing claims contrast with verified LabelLens truth analysis.
+            Choose a sample below to see how printed marketing claims contrast with labelled facts. These samples are fixed illustrations for the demo — they are not output from a scan of your photo. Real results always come from the Scan page.
           </p>
         </div>
 
@@ -388,3 +388,4 @@ export function InteractiveLabelSimulator() {
     </div>
   )
 }
+

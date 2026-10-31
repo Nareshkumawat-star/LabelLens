@@ -13,8 +13,6 @@ import {
   CheckCircle2,
   Info,
   Heart,
-  Flame,
-  Award,
 } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
@@ -27,159 +25,231 @@ interface Props {
 }
 
 // ---------------------------------------------------------------------------
-// Eatability & Quality Evaluation Engine
+// Label assessment engine
+//
+// This only reports what is actually legible in the photo. When a panel was
+// not read, the card says so ("not readable on this image") instead of
+// inferring "zero allergens" or "low sugar" from missing data.
 // ---------------------------------------------------------------------------
 interface EatabilityAssessment {
-  status: "perfect" | "good" | "moderate" | "caution"
+  status: "clear" | "moderate" | "caution" | "unknown"
   title: string
   badgeText: string
-  score: number // out of 100
+  /** Share of the four label pillars that were actually readable (0-100).
+   *  This is a readability measure, NOT a health or purity score. */
+  score: number
   headline: string
+  /** Statements that are backed by readable label text only. */
   reasons: string[]
   cautions: string[]
   metrics: {
     label: string
     value: string
-    tone: "good" | "warn" | "caution"
+    tone: "good" | "warn" | "caution" | "unknown"
     icon: React.ReactNode
   }[]
 }
 
+const NOT_READABLE = "Not readable on this image"
+
+function toNumber(value: string | null | undefined): number | null {
+  if (!value) return null
+  const parsed = Number.parseFloat(value.replace(/[^0-9.]/g, ""))
+  return Number.isFinite(parsed) ? parsed : null
+}
+
 function evaluateEatability(report: ProductReport): EatabilityAssessment {
   const n = report.nutrition
+  const onLabel = report.onLabel
   const allergens = report.allergens || []
   const warnings = report.warnings || []
-  const additives = (report.ingredients || []).filter((i) => i.flag === "additive")
-  const highSugars = (report.ingredients || []).filter((i) => i.flag === "high-sugar")
-  const highSodium = (report.ingredients || []).filter((i) => i.flag === "high-sodium")
+  const ingredients = report.ingredients || []
+  const additives = ingredients.filter((i) => i.flag === "additive")
+  const highSugars = ingredients.filter((i) => i.flag === "high-sugar")
+  const highSodium = ingredients.filter((i) => i.flag === "high-sodium")
 
-  const sugarsNum = n?.sugars ? parseFloat(n.sugars.replace(/[^0-9.]/g, "")) : null
-  const sodiumNum = n?.sodium ? parseFloat(n.sodium.replace(/[^0-9.]/g, "")) : null
+  const sugarsNum = toNumber(n?.sugars)
+  const sodiumNum = toNumber(n?.sodium)
 
-  const isExcessiveSugar = highSugars.length > 0 || (sugarsNum !== null && sugarsNum > 15)
-  const isExcessiveSodium = highSodium.length > 0 || (sodiumNum !== null && sodiumNum > 600)
-  const hasAdditives = additives.length > 0
-  const hasAllergens = allergens.length > 0
-  const hasWarnings = warnings.length > 0
+  // What did we actually read? Anything unread stays unknown — never assumed.
+  const ingredientsKnown = onLabel.ingredientsListed || ingredients.length > 0
+  const allergensKnown = onLabel.allergensListed || allergens.length > 0
+  const nutritionKnown = Boolean(
+    n && (sugarsNum !== null || sodiumNum !== null || n.calories || n.protein || n.fat)
+  )
+  const warningsKnown = warnings.length > 0
+
+  const knownCount = [ingredientsKnown, allergensKnown, nutritionKnown, warningsKnown].filter(
+    Boolean
+  ).length
+  const coverage = Math.round((knownCount / 4) * 100)
 
   const metrics: EatabilityAssessment["metrics"] = []
   const reasons: string[] = []
   const cautions: string[] = []
 
-  // 1. Allergen Metric
-  if (!hasAllergens) {
+  // 1. Allergens -------------------------------------------------------------
+  if (!allergensKnown) {
     metrics.push({
-      label: "Allergen Safety",
-      value: "0 Declared Allergens",
+      label: "Allergens",
+      value: NOT_READABLE,
+      tone: "unknown",
+      icon: <Info className="h-4 w-4 text-muted-foreground" />,
+    })
+    cautions.push(
+      "No allergen declaration was legible, so a missing list here does NOT mean the product is allergen-free. Check the physical pack."
+    )
+  } else if (allergens.length === 0) {
+    metrics.push({
+      label: "Allergens",
+      value: "None declared on label",
       tone: "good",
       icon: <ShieldCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />,
     })
-    reasons.push("Free of Big-9 food allergens on the printed package.")
+    reasons.push("The printed allergen declaration did not list any allergen.")
   } else {
     metrics.push({
       label: "Allergens",
-      value: `${allergens.length} Declared (${allergens.slice(0, 2).join(", ")}${allergens.length > 2 ? "…" : ""})`,
+      value: `${allergens.length} declared: ${allergens.slice(0, 2).join(", ")}${
+        allergens.length > 2 ? "…" : ""
+      }`,
       tone: "caution",
       icon: <ShieldAlert className="h-4 w-4 text-rose-600 dark:text-rose-400" />,
     })
-    cautions.push(`Contains declared allergens: ${allergens.join(", ")}.`)
+    cautions.push(`Declared allergens: ${allergens.join(", ")}.`)
   }
 
-  // 2. Additive & Preservative Metric
-  if (!hasAdditives) {
+  // 2. Ingredient list / additives -------------------------------------------
+  if (!ingredientsKnown) {
     metrics.push({
-      label: "Chemical Additives",
-      value: "Clean (0 Detected)",
+      label: "Ingredients",
+      value: NOT_READABLE,
+      tone: "unknown",
+      icon: <Info className="h-4 w-4 text-muted-foreground" />,
+    })
+    cautions.push("The ingredient list could not be read, so nothing can be confirmed about additives.")
+  } else if (additives.length > 0) {
+    metrics.push({
+      label: "Additives",
+      value: `${additives.length} flagged in readable text`,
+      tone: "warn",
+      icon: <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />,
+    })
+    cautions.push(
+      `Readable text lists ${additives.length} additive/preservative ingredient(s): ${additives
+        .slice(0, 4)
+        .map((i) => i.name)
+        .join(", ")}.`
+    )
+  } else {
+    metrics.push({
+      label: "Additives",
+      value: "None flagged in readable text",
       tone: "good",
       icon: <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />,
     })
-    reasons.push("Zero synthetic preservatives, artificial dyes, or chemical emulsifiers.")
-  } else {
-    metrics.push({
-      label: "Additives & Dyes",
-      value: `${additives.length} Flagged`,
-      tone: "warn",
-      icon: <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />,
-    })
-    cautions.push(`Contains ${additives.length} industrial food additive(s) or preservatives.`)
+    reasons.push("The readable ingredient list did not contain a flagged additive.")
   }
 
-  // 3. Sugar Content
-  if (!isExcessiveSugar) {
+  // 3. Sugar -----------------------------------------------------------------
+  if (sugarsNum === null) {
     metrics.push({
-      label: "Sugar Profile",
-      value: sugarsNum !== null ? `${sugarsNum}g (Balanced)` : "Balanced / Low",
+      label: "Sugar",
+      value: NOT_READABLE,
+      tone: "unknown",
+      icon: <Info className="h-4 w-4 text-muted-foreground" />,
+    })
+    cautions.push("No sugar value was readable, so sugar content cannot be commented on.")
+  } else if (highSugars.length > 0 || sugarsNum > 15) {
+    metrics.push({
+      label: "Sugar",
+      value: `${n?.sugars} as printed`,
+      tone: "warn",
+      icon: <Heart className="h-4 w-4 text-amber-600 dark:text-amber-400" />,
+    })
+    cautions.push(`Printed sugar value is ${n?.sugars} per serving as shown on the panel.`)
+  } else {
+    metrics.push({
+      label: "Sugar",
+      value: `${n?.sugars} as printed`,
       tone: "good",
       icon: <Heart className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />,
     })
-    reasons.push("Balanced sugar levels without high-fructose corn syrups.")
-  } else {
-    metrics.push({
-      label: "Sugar Content",
-      value: sugarsNum !== null ? `${sugarsNum}g (Elevated)` : "High Added Sugar",
-      tone: "warn",
-      icon: <Flame className="h-4 w-4 text-amber-600 dark:text-amber-400" />,
-    })
-    cautions.push("Elevated sugar content. Best enjoyed in moderation.")
+    reasons.push(`Printed sugar value is ${n?.sugars} per serving.`)
   }
 
-  // 4. Sodium & Advisories
-  if (!isExcessiveSodium && !hasWarnings) {
+  // 4. Sodium & printed warnings ---------------------------------------------
+  if (!warningsKnown && sodiumNum === null) {
     metrics.push({
-      label: "Salt & Warnings",
-      value: sodiumNum !== null ? `${sodiumNum}mg (Safe)` : "Clean Profile",
-      tone: "good",
-      icon: <Award className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />,
+      label: "Warnings & sodium",
+      value: NOT_READABLE,
+      tone: "unknown",
+      icon: <Info className="h-4 w-4 text-muted-foreground" />,
     })
-    reasons.push("Sodium and packaging statements meet standard dietary thresholds.")
-  } else {
+    cautions.push("No warning statement or sodium value was readable on this photo.")
+  } else if (warningsKnown) {
     metrics.push({
-      label: "Advisories",
-      value: hasWarnings ? "Printed Warning" : "High Sodium",
+      label: "Warnings",
+      value: `${warnings.length} printed statement(s)`,
+      tone: "caution",
+      icon: <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />,
+    })
+    cautions.push(...warnings)
+  } else if (sodiumNum !== null && highSodium.length > 0) {
+    metrics.push({
+      label: "Sodium",
+      value: `${n?.sodium} as printed`,
       tone: "warn",
       icon: <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />,
     })
-    if (hasWarnings) cautions.push(...warnings)
-    if (isExcessiveSodium) cautions.push("High sodium content per serving.")
+    cautions.push(`Printed sodium value is ${n?.sodium}.`)
+  } else {
+    metrics.push({
+      label: "Warnings & sodium",
+      value: "No warning statement printed",
+      tone: "good",
+      icon: <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />,
+    })
+    reasons.push("No warning statement was printed in the readable area of the label.")
   }
 
-  // Classification Logic
-  if (!hasAllergens && !hasWarnings && !hasAdditives && !isExcessiveSugar && !isExcessiveSodium) {
+  // Not enough of the label was read to say anything useful.
+  if (knownCount <= 1) {
     return {
-      status: "perfect",
-      title: "100% Perfect to Eat — Clean & Wholesome",
-      badgeText: "🌟 Perfect to Eat",
-      score: 98,
+      status: "unknown",
+      title: "Not Enough Label Information",
+      badgeText: "Cannot Be Determined",
+      score: coverage,
       headline:
-        "High nutritional purity! This food has a clean ingredient list with zero detected synthetic preservatives, chemical dyes, or declared allergens. Highly recommended for daily consumption.",
+        "Too little of this label was legible to assess. Nothing has been estimated or filled in — re-scan with the whole label in frame and good lighting.",
       reasons,
       cautions,
       metrics,
     }
   }
 
-  if (!hasAllergens && !hasWarnings && additives.length <= 1 && !isExcessiveSugar) {
+  if (allergens.length > 0 || warningsKnown) {
     return {
-      status: "good",
-      title: "Safe & Wholesome to Eat — Minimally Processed",
-      badgeText: "✓ Safe to Eat",
-      score: 86,
+      status: "caution",
+      title: "Read Before Eating",
+      badgeText: "Check The Label",
+      score: coverage,
       headline:
-        "Wholesome food with minimal industrial processing and zero critical allergen warnings. Safe and nutritious for everyday eating.",
+        "The readable label carries an allergen declaration or a printed warning. This is a record of what the pack says, not a health judgement.",
       reasons,
       cautions,
       metrics,
     }
   }
 
-  if (!hasAllergens && (hasAdditives || isExcessiveSugar || isExcessiveSodium)) {
+  if (additives.length > 0 || highSugars.length > 0 || highSodium.length > 0) {
     return {
       status: "moderate",
-      title: "Eat in Moderation — Processed Ingredients",
-      badgeText: "⚠️ Eat in Moderation",
-      score: 68,
+      title: "Flagged Ingredients In The Readable Text",
+      badgeText: "Review Ingredients",
+      score: coverage,
       headline:
-        "Contains elevated sugars, sodium, or synthetic emulsifiers/preservatives. Best enjoyed as an occasional snack rather than a core whole-food meal.",
+        "The readable ingredient or nutrition text shows additives, sugars or sodium worth reviewing. Judge with the rest of your diet — this is not a safety rating.",
       reasons,
       cautions,
       metrics,
@@ -187,12 +257,12 @@ function evaluateEatability(report: ProductReport): EatabilityAssessment {
   }
 
   return {
-    status: "caution",
-    title: "Review Before Eating — Allergens or Warnings Present",
-    badgeText: "🛑 Review Before Eating",
-    score: 52,
+    status: "clear",
+    title: "Nothing Flagged In The Readable Text",
+    badgeText: "No Flags Found",
+    score: coverage,
     headline:
-      "Declared food allergens or printed package warnings were identified on this label. Review the ingredients carefully if you have dietary restrictions or sensitivities.",
+      "Nothing in the text this scan could read raised a flag. That covers only the printed text that was legible — it is not a guarantee about the product.",
     reasons,
     cautions,
     metrics,
@@ -217,7 +287,7 @@ function Section({
     <div className="space-y-1.5">
       <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{title}</h4>
       {items.length === 0 ? (
-        <p className="text-sm text-muted-foreground italic">{empty}</p>
+        <p className="text-sm italic text-muted-foreground">{empty}</p>
       ) : (
         <ul className="space-y-1.5">
           {items.map((item, i) => (
@@ -261,95 +331,98 @@ export function ReportView({ report }: Props) {
       ]
     : []
 
+  const missingNutrition = nutritionRows.filter(([, value]) => !value).length
+
   const verdictStyles = {
-    perfect: {
+    clear: {
       border: "border-emerald-500/40 bg-emerald-500/5",
       badge: "bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border-emerald-500/30",
       score: "text-emerald-700 dark:text-emerald-400",
-      accent: "bg-emerald-500",
-    },
-    good: {
-      border: "border-blue-500/40 bg-blue-500/5",
-      badge: "bg-blue-500/15 text-blue-800 dark:text-blue-300 border-blue-500/30",
-      score: "text-blue-700 dark:text-blue-400",
-      accent: "bg-blue-500",
     },
     moderate: {
       border: "border-amber-500/40 bg-amber-500/5",
       badge: "bg-amber-500/15 text-amber-800 dark:text-amber-300 border-amber-500/30",
       score: "text-amber-700 dark:text-amber-400",
-      accent: "bg-amber-500",
     },
     caution: {
       border: "border-rose-500/40 bg-rose-500/5",
       badge: "bg-rose-500/15 text-rose-800 dark:text-rose-300 border-rose-500/30",
       score: "text-rose-700 dark:text-rose-400",
-      accent: "bg-rose-500",
+    },
+    unknown: {
+      border: "border-border bg-muted/20",
+      badge: "bg-muted text-muted-foreground border-border",
+      score: "text-muted-foreground",
     },
   }[verdict.status]
 
   return (
     <div className="space-y-6">
-      {/* 1. "IS IT PERFECT TO EAT?" — Prominent Edibility & Safety Verdict Card */}
+      {/* 1. Label assessment card — only what was readable */}
       <Card className={`relative overflow-hidden border-2 ${verdictStyles.border} shadow-sm transition-all`}>
-        <div className="p-6 space-y-5">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/60 pb-4">
+        <div className="space-y-5 p-6">
+          <div className="flex flex-col justify-between gap-3 border-b border-border/60 pb-4 sm:flex-row sm:items-center">
             <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-0.5 text-xs font-bold ${verdictStyles.badge}`}>
+              <div className="flex flex-wrap items-center gap-2">
+                <span
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-0.5 text-xs font-bold ${verdictStyles.badge}`}
+                >
                   {verdict.badgeText}
                 </span>
-                <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-                  Eatability Assessment
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Label Assessment
                 </span>
               </div>
-              <h3 className="text-xl sm:text-2xl font-black tracking-tight text-foreground">
+              <h3 className="text-xl font-black tracking-tight text-foreground sm:text-2xl">
                 {verdict.title}
               </h3>
             </div>
 
-            <div className="flex items-center gap-3 shrink-0 rounded-xl border bg-card p-2.5 shadow-2xs">
+            <div className="flex shrink-0 items-center gap-3 rounded-xl border bg-card p-2.5 shadow-2xs">
               <div className="text-right">
-                <div className="text-[10px] font-semibold text-muted-foreground uppercase">Purity Rating</div>
+                <div className="text-[10px] font-semibold uppercase text-muted-foreground">
+                  Label coverage
+                </div>
                 <div className={`text-2xl font-black tabular-nums ${verdictStyles.score}`}>
                   {verdict.score}
-                  <span className="text-xs text-muted-foreground font-normal"> / 100</span>
+                  <span className="text-xs font-normal text-muted-foreground">%</span>
                 </div>
               </div>
             </div>
           </div>
 
-          <p className="text-sm font-medium leading-relaxed text-foreground">
-            {verdict.headline}
-          </p>
+          <p className="text-sm font-medium leading-relaxed text-foreground">{verdict.headline}</p>
 
-          {/* 4-Pillar Diagnostic Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {/* Diagnostic grid */}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {verdict.metrics.map((m, idx) => (
-              <div
-                key={idx}
-                className="rounded-xl border bg-card/80 p-3 space-y-1 shadow-2xs"
-              >
-                <div className="flex items-center justify-between">
+              <div key={idx} className="space-y-1 rounded-xl border bg-card/80 p-3 shadow-2xs">
+                <div className="flex items-center justify-between gap-1">
                   <span className="text-[11px] font-semibold text-muted-foreground">{m.label}</span>
                   {m.icon}
                 </div>
-                <div className="text-xs font-bold text-foreground truncate">{m.value}</div>
+                <div
+                  className={`text-xs font-bold ${
+                    m.tone === "unknown" ? "italic text-muted-foreground" : "text-foreground"
+                  }`}
+                >
+                  {m.value}
+                </div>
               </div>
             ))}
           </div>
 
-          {/* Reasons & Cautions Breakdown */}
-          <div className="grid gap-3 sm:grid-cols-2 pt-1 text-xs">
+          {/* Statements & cautions */}
+          <div className="grid gap-3 pt-1 text-xs sm:grid-cols-2">
             {verdict.reasons.length > 0 && (
-              <div className="rounded-xl bg-card border p-3 space-y-1.5">
-                <div className="font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
-                  <CheckCircle2 className="h-3.5 w-3.5" /> What makes it good to eat:
+              <div className="space-y-1.5 rounded-xl border bg-card p-3">
+                <div className="flex items-center gap-1.5 font-bold text-emerald-700 dark:text-emerald-400">
+                  <CheckCircle2 className="h-3.5 w-3.5" /> Stated on the readable label
                 </div>
                 <ul className="space-y-1 text-muted-foreground">
                   {verdict.reasons.map((r, i) => (
                     <li key={i} className="flex items-start gap-1.5">
-                      <span className="text-emerald-500 font-bold">•</span>
+                      <span className="font-bold text-emerald-500">•</span>
                       <span>{r}</span>
                     </li>
                   ))}
@@ -358,14 +431,14 @@ export function ReportView({ report }: Props) {
             )}
 
             {verdict.cautions.length > 0 && (
-              <div className="rounded-xl bg-card border p-3 space-y-1.5">
-                <div className="font-bold text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
-                  <AlertTriangle className="h-3.5 w-3.5" /> What to watch out for:
+              <div className="space-y-1.5 rounded-xl border bg-card p-3">
+                <div className="flex items-center gap-1.5 font-bold text-amber-700 dark:text-amber-400">
+                  <AlertTriangle className="h-3.5 w-3.5" /> What to check yourself
                 </div>
                 <ul className="space-y-1 text-muted-foreground">
                   {verdict.cautions.map((c, i) => (
                     <li key={i} className="flex items-start gap-1.5">
-                      <span className="text-amber-500 font-bold">•</span>
+                      <span className="font-bold text-amber-500">•</span>
                       <span>{c}</span>
                     </li>
                   ))}
@@ -373,18 +446,24 @@ export function ReportView({ report }: Props) {
               </div>
             )}
           </div>
+
+          <p className="rounded-lg bg-muted/50 px-3 py-2 text-[11px] leading-relaxed text-muted-foreground">
+            This card summarises the text that was actually readable in your photo. It is not a
+            health, safety or purity rating, and it never fills in values that the scan could not
+            read.
+          </p>
         </div>
       </Card>
 
-      {/* 2. Product Identity & AI Summary */}
+      {/* 2. Product identity & summary */}
       <Card className="border bg-card shadow-xs">
         <CardHeader className="pb-3">
           <div className="flex flex-wrap items-center gap-2.5">
             <CardTitle className="text-2xl font-bold tracking-tight text-foreground">
-              {report.productName ?? "Unnamed Product"}
+              {report.productName ?? "Product name not readable"}
             </CardTitle>
-            <Badge variant="secondary" className="font-semibold text-xs capitalize">
-              {report.category ?? "Uncategorised"}
+            <Badge variant="secondary" className="text-xs font-semibold capitalize">
+              {report.category ?? "Category not stated"}
             </Badge>
             <Badge variant="outline" className="text-xs font-medium tabular-nums">
               Confidence: {report.confidence}
@@ -395,7 +474,8 @@ export function ReportView({ report }: Props) {
         <CardContent className="space-y-3">
           <p className="text-sm leading-relaxed text-foreground">{report.summary}</p>
           <div className="rounded-lg bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
-            Summary is synthesized strictly from readable label text. It does not constitute a medical diagnosis.
+            Summary is synthesized strictly from readable label text. It does not constitute a
+            medical diagnosis.
           </div>
         </CardContent>
       </Card>
@@ -405,27 +485,28 @@ export function ReportView({ report }: Props) {
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-lg font-bold">
-              <Eye className="h-5 w-5 text-primary shrink-0" />
+              <Eye className="h-5 w-5 shrink-0 text-primary" />
               <span>Label Truth Mode</span>
             </CardTitle>
-            <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               Verification Engine
             </span>
           </div>
           <p className="text-xs text-muted-foreground">
-            Verbatim printed text, AI explanations, and unverified data are segregated with zero bleed.
+            Verbatim printed text, AI explanations, and unverified data are segregated with zero
+            bleed.
           </p>
         </CardHeader>
         <CardContent>
           <Tabs value={mode} onValueChange={(v) => setMode(v as TruthMode)}>
             <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="on-label" className="font-semibold text-xs sm:text-sm">
+              <TabsTrigger value="on-label" className="text-xs font-semibold sm:text-sm">
                 On Label (Verbatim)
               </TabsTrigger>
-              <TabsTrigger value="ai-explanation" className="font-semibold text-xs sm:text-sm">
+              <TabsTrigger value="ai-explanation" className="text-xs font-semibold sm:text-sm">
                 AI Explanation
               </TabsTrigger>
-              <TabsTrigger value="not-verified" className="font-semibold text-xs sm:text-sm">
+              <TabsTrigger value="not-verified" className="text-xs font-semibold sm:text-sm">
                 Not Verified
               </TabsTrigger>
             </TabsList>
@@ -449,40 +530,40 @@ export function ReportView({ report }: Props) {
               <Section
                 title="Printed Warnings"
                 items={report.onLabel.warnings}
-                empty="No warning statements were printed on this packaging."
+                empty="No warning statement was printed or legible."
                 tone="warning"
               />
               <Section
                 title="Storage Instructions"
                 items={report.onLabel.storageInstructions}
-                empty="Not printed on packaging."
+                empty="Not printed on packaging, or not readable."
               />
               <Section
                 title="Usage Instructions"
                 items={report.onLabel.usageInstructions}
-                empty="Not printed on packaging."
+                empty="Not printed on packaging, or not readable."
               />
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 border-t pt-4 text-xs">
-                <div className="rounded-md border p-2 bg-muted/20">
+              <div className="grid grid-cols-2 gap-3 border-t pt-4 text-xs sm:grid-cols-4">
+                <div className="rounded-md border bg-muted/20 p-2">
                   <div className="text-muted-foreground">Ingredients Listed</div>
                   <div className="font-semibold text-foreground">
-                    {report.onLabel.ingredientsListed ? "Yes" : "No"}
+                    {report.onLabel.ingredientsListed ? "Yes" : "Not found"}
                   </div>
                 </div>
-                <div className="rounded-md border p-2 bg-muted/20">
+                <div className="rounded-md border bg-muted/20 p-2">
                   <div className="text-muted-foreground">Allergens Listed</div>
                   <div className="font-semibold text-foreground">
-                    {report.onLabel.allergensListed ? "Yes" : "No"}
+                    {report.onLabel.allergensListed ? "Yes" : "Not found"}
                   </div>
                 </div>
-                <div className="rounded-md border p-2 bg-muted/20">
+                <div className="rounded-md border bg-muted/20 p-2">
                   <div className="text-muted-foreground">Nutrition Panel</div>
                   <div className="font-semibold text-foreground">
-                    {report.onLabel.nutritionVisible ? "Visible" : "Not Visible"}
+                    {report.onLabel.nutritionVisible ? "Visible" : "Not visible"}
                   </div>
                 </div>
-                <div className="rounded-md border p-2 bg-muted/20">
+                <div className="rounded-md border bg-muted/20 p-2">
                   <div className="text-muted-foreground">Expiry Date</div>
                   <div className="font-semibold tabular-nums text-foreground">
                     {report.onLabel.expiryDate ?? "Not found"}
@@ -494,24 +575,25 @@ export function ReportView({ report }: Props) {
             <TabsContent value="ai-explanation" className="space-y-4 pt-4">
               <div className="flex items-center gap-2 rounded-lg bg-blue-500/10 px-3 py-2 text-xs font-medium text-blue-800 dark:text-blue-300">
                 <Sparkles className="h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" />
-                Scientific context generated by the multimodal model. These explanations are not printed on the package.
+                Scientific context generated by the multimodal model. These explanations are not
+                printed on the package.
               </div>
 
               {report.ingredients.length === 0 ? (
-                <p className="text-sm text-muted-foreground italic">
+                <p className="text-sm italic text-muted-foreground">
                   No legible ingredients were found to explain.
                 </p>
               ) : (
                 <div className="space-y-3">
                   {report.ingredients.map((ing, i) => (
-                    <div key={i} className="rounded-xl border bg-muted/10 p-3.5 space-y-1.5">
+                    <div key={i} className="space-y-1.5 rounded-xl border bg-muted/10 p-3.5">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-bold text-sm text-foreground">{ing.name}</span>
+                        <span className="text-sm font-bold text-foreground">{ing.name}</span>
                         <Badge variant="outline" className="text-[10px] font-semibold tabular-nums">
                           {ing.confidence} confidence
                         </Badge>
                         {ing.flag !== "none" && (
-                          <Badge variant="destructive" className="text-[10px] uppercase font-bold">
+                          <Badge variant="destructive" className="text-[10px] font-bold uppercase">
                             {ing.flag}
                           </Badge>
                         )}
@@ -521,7 +603,7 @@ export function ReportView({ report }: Props) {
                           <span className="font-semibold">Printed:</span> {ing.sourceText}
                         </p>
                       )}
-                      <p className="text-sm text-foreground leading-relaxed">{ing.explanation}</p>
+                      <p className="text-sm leading-relaxed text-foreground">{ing.explanation}</p>
                       {ing.purpose && (
                         <p className="text-xs text-muted-foreground">
                           <span className="font-semibold">Functional role:</span> {ing.purpose}
@@ -536,55 +618,72 @@ export function ReportView({ report }: Props) {
             <TabsContent value="not-verified" className="space-y-5 pt-4">
               <div className="flex items-center gap-2 rounded-lg bg-amber-500/10 px-3 py-2 text-xs font-medium text-amber-800 dark:text-amber-300">
                 <HelpCircle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
-                Information that could not be authoritatively verified from the photograph provided.
+                Information that could not be authoritatively verified from the photograph
+                provided. Nothing here is guessed.
               </div>
               <Section
                 title="Unreadable Information"
                 items={report.unreadableInformation}
-                empty="Zero sections were flagged as unreadable."
+                empty="Nothing was flagged as unreadable."
               />
               <Section
-                title="Missing From Label"
+                title="Not Present On This Label"
                 items={report.missingInformation}
-                empty="Zero standard disclosures were reported missing."
+                empty="No standard disclosures were reported missing."
               />
             </TabsContent>
           </Tabs>
         </CardContent>
       </Card>
 
-      {/* 4. Nutrition Facts Table */}
+      {/* 4. Nutrition facts table */}
       <Card className="border bg-card shadow-xs">
         <CardHeader className="pb-3">
           <CardTitle className="text-lg font-bold">Nutrition Facts</CardTitle>
           <p className="text-xs text-muted-foreground">
-            Extracted values per serving. Verified against label panel.
+            Values exactly as printed on the nutrition panel. Nothing is estimated or filled in.
           </p>
         </CardHeader>
         <CardContent>
           {!n ? (
             <p className="flex items-center gap-2 text-sm text-muted-foreground">
-              <X className="h-4 w-4 text-muted-foreground" /> No nutrition panel was readable on this label.
+              <X className="h-4 w-4 text-muted-foreground" /> No nutrition panel was readable on
+              this label, so no values are shown.
             </p>
           ) : (
-            <div className="rounded-lg border overflow-hidden">
-              <dl className="divide-y text-sm">
-                {nutritionRows.map(([label, value]) => (
-                  <div
-                    key={label}
-                    className="flex items-center justify-between px-4 py-2 hover:bg-muted/30 transition-colors"
-                  >
-                    <dt className="text-muted-foreground font-medium">{label}</dt>
-                    <dd className="font-bold tabular-nums text-foreground">{value ?? "—"}</dd>
-                  </div>
-                ))}
-              </dl>
+            <div className="space-y-2">
+              <div className="overflow-hidden rounded-lg border">
+                <dl className="divide-y text-sm">
+                  {nutritionRows.map(([label, value]) => (
+                    <div
+                      key={label}
+                      className="flex items-center justify-between px-4 py-2 transition-colors hover:bg-muted/30"
+                    >
+                      <dt className="font-medium text-muted-foreground">{label}</dt>
+                      <dd
+                        className={`font-bold tabular-nums ${
+                          value ? "text-foreground" : "italic text-muted-foreground/70"
+                        }`}
+                      >
+                        {value ?? "not readable"}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+              {missingNutrition > 0 && (
+                <p className="flex items-start gap-1.5 text-[11px] text-muted-foreground">
+                  <Info className="mt-0.5 h-3 w-3 shrink-0" />
+                  {missingNutrition} row{missingNutrition > 1 ? "s" : ""} could not be read from the
+                  photo. Those values are left blank on purpose — they were not estimated.
+                </p>
+              )}
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* 5. Allergens & Warnings Cards */}
+      {/* 5. Allergens & warnings */}
       <div className="grid gap-4 sm:grid-cols-2">
         <Card className="border bg-card shadow-xs">
           <CardHeader className="pb-2">
@@ -592,11 +691,21 @@ export function ReportView({ report }: Props) {
           </CardHeader>
           <CardContent>
             {report.allergens.length === 0 ? (
-              <p className="text-sm text-muted-foreground italic">None declared on the readable label.</p>
+              report.onLabel.allergensListed ? (
+                <p className="text-sm italic text-muted-foreground">
+                  No allergen was listed in the printed declaration.
+                </p>
+              ) : (
+                <p className="flex items-start gap-1.5 text-sm italic text-muted-foreground">
+                  <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                  No allergen declaration could be read. Absence here does not mean this product is
+                  allergen-free.
+                </p>
+              )
             ) : (
               <div className="flex flex-wrap gap-1.5">
                 {report.allergens.map((a, i) => (
-                  <Badge key={i} variant="secondary" className="font-semibold text-xs">
+                  <Badge key={i} variant="secondary" className="text-xs font-semibold">
                     {a}
                   </Badge>
                 ))}
@@ -611,7 +720,9 @@ export function ReportView({ report }: Props) {
           </CardHeader>
           <CardContent>
             {report.warnings.length === 0 ? (
-              <p className="text-sm text-muted-foreground italic">None printed on the readable label.</p>
+              <p className="text-sm italic text-muted-foreground">
+                No warning statement was printed in the readable area of the label.
+              </p>
             ) : (
               <ul className="space-y-2 text-sm">
                 {report.warnings.map((w, i) => (
