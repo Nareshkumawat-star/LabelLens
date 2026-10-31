@@ -93,8 +93,18 @@ export function parseAIOutput(raw: string): { ok: true; report: ParsedReport } |
   return { ok: true, report: result.data }
 }
 
+/** One earlier turn of the same conversation, used as grounding context. */
+const AskTurnSchema = z.object({
+  question: z.string().max(500),
+  answer: z.string().max(4000),
+})
+
 /** Request body validation for the Ask Your Label endpoint. */
 export const AskRequestSchema = z.object({
   scanId: z.string().min(1, "scanId is required"),
   question: z.string().min(2, "question is too short").max(500),
+  /** Language the answer should be written in. */
+  language: z.enum(["en", "hi"]).optional().default("en"),
+  /** Recent turns, oldest first. Capped so the prompt stays small. */
+  history: z.array(AskTurnSchema).max(6).optional(),
 })

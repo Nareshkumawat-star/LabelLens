@@ -51,17 +51,53 @@ Rules — follow them exactly:
 - Keep "summary" to 2-4 plain-language sentences.`
 }
 
+export const NOT_AVAILABLE_EN = "This information is not available in the scanned label."
+export const NOT_AVAILABLE_HI = "यह जानकारी स्कैन किए गए लेबल में उपलब्ध नहीं है।"
+
+export type AskLanguage = "en" | "hi"
+
+export interface AskContext {
+  language?: AskLanguage
+  /** Earlier turns of this same conversation, oldest first. */
+  history?: { question: string; answer: string }[]
+}
+
 /**
  * Grounded question answering over an already-saved report.
- * The report is the only permitted source of truth.
+ * The report is the only permitted source of truth; earlier turns only supply
+ * conversational context, never new facts.
  */
-export function buildAskPrompt(question: string, report: ProductReport): string {
-  return `You are LabelLens answering a question about one specific scanned product label.
+export function buildAskPrompt(
+  question: string,
+  report: ProductReport,
+  context: AskContext = {}
+): string {
+  const language = context.language ?? "en"
+  const history = context.history ?? []
 
-Use ONLY the saved report below. If the answer is not present in it, reply exactly:
-"This information is not available in the scanned label."
+  const transcript = history.length
+    ? history.map((turn, i) => `Q${i + 1}: ${turn.question}\nA${i + 1}: ${turn.answer}`).join("\n")
+    : "(this is the first question about this label)"
 
-Never invent product data. Do not give medical advice. Do not say a product is safe or unsafe. Answer in 1-3 short sentences of plain language.
+  const languageRule =
+    language === "hi"
+      ? `LANGUAGE: Write the whole answer in natural Hindi using Devanagari script. Keep printed label text (ingredient names, numbers, units) in its original form. If the answer is not in the report, reply exactly:
+"${NOT_AVAILABLE_HI}"`
+      : `LANGUAGE: Write the whole answer in plain English. If the answer is not in the report, reply exactly:
+"${NOT_AVAILABLE_EN}"`
+
+  return `You are LabelLens, answering a follow-up question about one specific product label that was already scanned.
+
+Rules:
+- Use ONLY the saved report below as the source of facts.
+- Earlier turns are context for what the user already asked. They may contain answers you gave; they may NOT be used to introduce facts that are absent from the report.
+- Never invent an ingredient, nutrition value, allergen, warning or instruction.
+- Do not give medical advice and do not call the product safe, unsafe, healthy or unhealthy.
+- Answer in 1-3 short sentences of plain language. No markdown, no bullet points, no preamble.
+- ${languageRule}
+
+EARLIER TURNS:
+${transcript}
 
 SAVED REPORT:
 ${JSON.stringify(report)}
