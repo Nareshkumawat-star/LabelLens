@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import Link from "next/link"
 import {
   ScanLine,
   Sparkles,
@@ -11,20 +12,15 @@ import {
   HeartHandshake,
   CheckCircle2,
   Lock,
-  RotateCcw,
+  History,
   Layers,
+  Award,
 } from "lucide-react"
-import Link from "next/link"
 
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { ImageUploader } from "@/components/label-lens/image-uploader"
-import { ReportView } from "@/components/label-lens/report-view"
-import { AskYourLabel } from "@/components/label-lens/ask-your-label"
-import { ScanHistory } from "@/components/label-lens/scan-history"
 import { StylishBanner } from "@/components/watermelon/stylish-banner"
 import { WatermelonFaqAccordion } from "@/components/watermelon/watermelon-faq-accordion"
-import type { ScanRecord, ScanDetail } from "@/lib/types"
 
 const DETAILS_PILLARS = [
   {
@@ -62,37 +58,6 @@ const DETAILS_PILLARS = [
 ]
 
 export default function IndexPage() {
-  const [scan, setScan] = React.useState<ScanRecord | null>(null)
-  const [refreshKey, setRefreshKey] = React.useState(0)
-  const [loadingHistoryScan, setLoadingHistoryScan] = React.useState(false)
-
-  const scannerRef = React.useRef<HTMLDivElement>(null)
-
-  const scrollToScanner = () => {
-    scannerRef.current?.scrollIntoView({ behavior: "smooth" })
-  }
-
-  const onAnalyzed = (next: ScanRecord) => {
-    setScan(next)
-    setRefreshKey((k) => k + 1)
-  }
-
-  const onSelectScanFromHistory = async (id: string) => {
-    setLoadingHistoryScan(true)
-    try {
-      const res = await fetch(`/api/scans/${id}`)
-      const data = await res.json()
-      if (res.ok && data.success && data.scan) {
-        setScan(data.scan as ScanRecord)
-        scrollToScanner()
-      }
-    } catch {
-      // fallback
-    } finally {
-      setLoadingHistoryScan(false)
-    }
-  }
-
   return (
     <div className="container max-w-6xl space-y-12 py-10">
       {/* 1. HERO HEADER WITH DETAILS REGARDING LABELLENS */}
@@ -117,47 +82,51 @@ export default function IndexPage() {
 
             <p className="text-base sm:text-lg text-muted-foreground leading-relaxed">
               Understand what is <strong className="text-foreground font-semibold">really inside</strong> your packaged food.
-              Scan any label to uncover hidden additives, verify nutrition claims, and get an instant{" "}
-              <strong className="text-foreground font-semibold">&ldquo;Is It Perfect to Eat?&rdquo;</strong> health verdict with zero guesswork.
+              Scan any food label to uncover hidden additives, verify printed nutrition facts, and receive an instant{" "}
+              <strong className="text-foreground font-semibold">&ldquo;Is It Perfect to Eat?&rdquo;</strong> edibility verdict with zero guesswork.
             </p>
 
-            {/* CHECK FOOD LABEL BUTTON & CTA ACTIONS */}
+            {/* BUTTON: WHEN CLICKED, OPENS THE SECOND PAGE (/scan) */}
             <div className="flex flex-wrap items-center gap-3 pt-2">
               <Button
+                asChild
                 size="lg"
-                onClick={scrollToScanner}
                 className="h-12 px-6 text-sm font-bold shadow-md shadow-primary/20 gap-2 cursor-pointer transition-all hover:scale-102"
               >
-                <ScanLine className="h-5 w-5" />
-                Check Food Label Now
+                <Link href="/scan">
+                  <ScanLine className="h-5 w-5" />
+                  Check Food Label Now
+                </Link>
               </Button>
+
               <Button
                 asChild
                 variant="outline"
                 size="lg"
-                className="h-12 px-5 text-sm font-semibold"
+                className="h-12 px-5 text-sm font-semibold gap-1.5"
               >
-                <a href="#how-it-works">
-                  How LabelLens Works <ArrowRight className="ml-1.5 h-4 w-4" />
-                </a>
+                <Link href="/history">
+                  <History className="h-4 w-4 text-primary" />
+                  View Scan History
+                </Link>
               </Button>
             </div>
           </div>
 
           <div className="flex flex-row md:flex-col items-end gap-2.5 shrink-0">
-            <div className="rounded-xl border bg-card p-3 shadow-xs text-right min-w-[150px]">
-              <div className="text-[11px] font-medium text-muted-foreground">Vision Engine</div>
+            <div className="rounded-xl border bg-card p-3 shadow-xs text-right min-w-[155px]">
+              <div className="text-[11px] font-medium text-muted-foreground">Detection Engine</div>
               <div className="text-sm font-bold text-foreground">Gemma Multimodal</div>
             </div>
-            <div className="rounded-xl border bg-card p-3 shadow-xs text-right min-w-[150px]">
-              <div className="text-[11px] font-medium text-muted-foreground">Privacy Protection</div>
-              <div className="text-sm font-bold tabular-nums text-emerald-700 dark:text-emerald-400">0% Image Storage</div>
+            <div className="rounded-xl border bg-card p-3 shadow-xs text-right min-w-[155px]">
+              <div className="text-[11px] font-medium text-muted-foreground">Image Retention</div>
+              <div className="text-sm font-bold tabular-nums text-emerald-700 dark:text-emerald-400">0% (In-Memory)</div>
             </div>
           </div>
         </div>
 
-        {/* DETAILS REGARDING LABELLENS — 4 CORE PILLARS */}
-        <div id="how-it-works" className="space-y-4 pt-2">
+        {/* DETAILS REGARDING LABELLENS — 4 CORE VERIFICATION PILLARS */}
+        <div id="pillars" className="space-y-4 pt-2">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
               What LabelLens Inspects For You
@@ -197,107 +166,54 @@ export default function IndexPage() {
         <StylishBanner />
       </header>
 
-      {/* 2. SCANNER WORKBENCH WITH HISTORY ON TOP */}
-      <section ref={scannerRef} id="scanner-section" className="space-y-6 scroll-mt-20">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-4">
-          <div>
-            <h2 className="text-xl sm:text-2xl font-black tracking-tight text-foreground flex items-center gap-2">
-              <ScanLine className="h-6 w-6 text-primary" />
-              Food Label Scanner
-            </h2>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Review your recent scans on top, or drag & drop any product label below to uncover what&apos;s really inside.
-            </p>
-          </div>
-
-          {scan && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setScan(null)}
-              className="text-xs font-semibold gap-1.5"
-            >
-              <RotateCcw className="h-3.5 w-3.5" />
-              Scan Another Label
-            </Button>
-          )}
-        </div>
-
-        {/* ON TOP: SHOW RECENT SCAN HISTORY */}
-        <div className="space-y-2">
-          <ScanHistory
-            refreshKey={refreshKey}
-            onSelectScan={onSelectScanFromHistory}
-            activeScanId={scan?.id}
-          />
-        </div>
-
-        {/* IMMEDIATELY BELOW: DRAG & DROP FOOD UPLOADER */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-foreground flex items-center gap-1.5">
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">
-                +
-              </span>
-              Upload New Food Label
-            </h3>
-            <span className="text-[11px] text-muted-foreground">
-              JPG, PNG, WEBP · up to 5 MB
+      {/* 2. SECOND PAGE LAUNCHER CARD */}
+      <section className="rounded-2xl border bg-gradient-to-br from-card via-card to-muted/30 p-8 sm:p-10 shadow-xs space-y-6">
+        <div className="max-w-2xl space-y-3">
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">
+              <Award className="h-3.5 w-3.5" />
+              Instant Nutrition Intelligence
             </span>
           </div>
-          <ImageUploader onAnalyzed={onAnalyzed} />
+          <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-foreground">
+            Ready to test your packaged food?
+          </h2>
+          <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">
+            Open the dedicated food scanner page to drag & drop any product label, review previous scans directly on top, and get an authoritative edibility verdict.
+          </p>
         </div>
 
-        {/* 3. ANALYSIS RESULTS VIEW WITH "IS IT PERFECT TO EAT?" VERDICT */}
-        {scan ? (
-          <div className="space-y-6 pt-4 animate-in fade-in-50 duration-300">
-            <div className="flex items-center justify-between border-b pb-3">
-              <h3 className="text-lg font-bold text-foreground">
-                Analysis for: <span className="text-primary">{scan.report.productName ?? "Scanned Food"}</span>
-              </h3>
-              <Badge variant="outline" className="text-xs font-mono">
-                Scan ID: {scan.id.slice(0, 8)}
-              </Badge>
-            </div>
-
-            <div className="grid gap-6 lg:grid-cols-3">
-              <div className="space-y-6 lg:col-span-2">
-                <ReportView report={scan.report} />
-              </div>
-              <div className="space-y-6">
-                <AskYourLabel scanId={scan.id} />
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="rounded-2xl border border-dashed bg-muted/20 p-10 text-center transition-colors">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-background border shadow-xs">
-              <ScanLine className="h-6 w-6 text-muted-foreground" />
-            </div>
-            <h4 className="mt-4 text-base font-bold text-foreground">Ready to analyze</h4>
-            <p className="mx-auto mt-1 max-w-md text-xs text-muted-foreground leading-relaxed">
-              Drag and drop any food or beverage label above. Gemma will extract verbatim printed ingredients,
-              unmask additives, and evaluate if it is perfect to eat.
-            </p>
-          </div>
-        )}
+        <div className="flex flex-wrap items-center gap-3">
+          <Button asChild size="lg" className="h-11 px-6 font-bold gap-2 shadow-xs">
+            <Link href="/scan">
+              <ScanLine className="h-4.5 w-4.5" />
+              Open Food Scanner Page
+            </Link>
+          </Button>
+          <Button asChild variant="outline" size="lg" className="h-11 px-5 font-semibold gap-2">
+            <Link href="/history">
+              <History className="h-4.5 w-4.5 text-primary" />
+              Review Scan History
+            </Link>
+          </Button>
+        </div>
       </section>
 
-      {/* 4. WATERMELON CARD-SPLIT FAQ & ARCHITECTURE ACCORDION */}
-      <section className="pt-4">
+      {/* 3. WATERMELON CARD-SPLIT FAQ & ARCHITECTURE ACCORDION */}
+      <section className="pt-2">
         <WatermelonFaqAccordion />
       </section>
 
-      {/* 5. FOOTER */}
+      {/* 4. FOOTER */}
       <footer className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t pt-8 pb-4 text-xs text-muted-foreground">
         <div className="flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-primary shrink-0" />
           <p>
-            LabelLens is an informational transparency tool. It does not provide medical advice and does not replace professional dietary guidance.
+            LabelLens is an informational transparency tool. It does not provide medical diagnosis and does not classify products as healthy or unsafe.
           </p>
         </div>
         <div className="flex items-center gap-3 shrink-0 font-medium font-mono text-[11px]">
-          <span>Powered by Gemma + Watermelon UI</span>
+          <span>Gemma Multimodal + Watermelon UI</span>
         </div>
       </footer>
     </div>

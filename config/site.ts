@@ -6,8 +6,16 @@ export const siteConfig = {
     "AI-powered food label scanner and nutrition intelligence analyzer.",
   mainNav: [
     {
-      title: "Scanner",
+      title: "Home",
       href: "/",
+    },
+    {
+      title: "Scan Label",
+      href: "/scan",
+    },
+    {
+      title: "History",
+      href: "/history",
     },
   ],
   links: {

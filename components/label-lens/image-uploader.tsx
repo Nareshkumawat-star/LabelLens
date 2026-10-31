@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { UploadCloud, Camera, X, Loader2, AlertCircle, FileText, CheckCircle2 } from "lucide-react"
+import { UploadCloud, Camera, X, Loader2, AlertCircle, FileText } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -25,6 +25,14 @@ export function ImageUploader({ onAnalyzed }: Props) {
 
   const fileInput = React.useRef<HTMLInputElement>(null)
   const cameraInput = React.useRef<HTMLInputElement>(null)
+
+  // In-app camera (getUserMedia). The `capture` attribute only hints the mobile
+  // OS camera app and is ignored on desktop, so we open a real live preview instead.
+  const [cameraOpen, setCameraOpen] = React.useState(false)
+  const [cameraStarting, setCameraStarting] = React.useState(false)
+  const [cameraError, setCameraError] = React.useState<string | null>(null)
+  const [stream, setStream] = React.useState<MediaStream | null>(null)
+  const videoRef = React.useRef<HTMLVideoElement>(null)
 
   // Object URLs must be revoked when replaced or unmounted.
   const setPreviewFor = React.useCallback((next: File | null) => {
@@ -58,6 +66,108 @@ export function ImageUploader({ onAnalyzed }: Props) {
     setFile(candidate)
     setPreviewFor(candidate)
     setStatus("ready")
+  }
+
+  // Attach the live stream once the <video> element is mounted.
+  React.useEffect(() => {
+    const video = videoRef.current
+    if (!video || !stream) return
+    video.srcObject = stream
+    void video.play().catch(() => {})
+  }, [stream, cameraOpen])
+
+  // Release the camera hardware on unmount.
+  React.useEffect(() => {
+    return () => {
+      setStream((current) => {
+        current?.getTracks().forEach((track) => track.stop())
+        return null
+      })
+    }
+  }, [])
+
+  const stopCamera = React.useCallback(() => {
+    setStream((current) => {
+      current?.getTracks().forEach((track) => track.stop())
+      return null
+    })
+    if (videoRef.current) videoRef.current.srcObject = null
+    setCameraOpen(false)
+  }, [])
+
+  const openCamera = async () => {
+    setError(null)
+    setCameraError(null)
+    const media =
+      typeof navigator !== "undefined" && navigator.mediaDevices
+        ? navigator.mediaDevices
+        : null
+
+    // No camera API at all (old browser, or insecure origin): fall back to the
+    // native capture input, which still opens the phone camera on mobile.
+    if (!media?.getUserMedia) {
+      cameraInput.current?.click()
+      return
+    }
+
+    setCameraOpen(true)
+    setCameraStarting(true)
+
+    try {
+      const next = await media.getUserMedia({
+        video: {
+          facingMode: { ideal: "environment" },
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+        },
+        audio: false,
+      })
+      setStream(next)
+    } catch (err) {
+      const name = err instanceof Error ? err.name : ""
+      const reason =
+        name === "NotAllowedError"
+          ? "Camera permission was blocked. Allow camera access for this site and try again."
+          : name === "NotFoundError"
+            ? "No camera was found on this device."
+            : name === "NotReadableError"
+              ? "The camera is already in use by another application."
+              : "The camera could not be opened."
+      setCameraOpen(false)
+      setCameraError(reason + " You can still upload a photo from your device.")
+    } finally {
+      setCameraStarting(false)
+    }
+  }
+
+  const capturePhoto = () => {
+    const video = videoRef.current
+    if (!video || !video.videoWidth) return
+
+    const maxEdge = 1600
+    const scale = Math.min(1, maxEdge / Math.max(video.videoWidth, video.videoHeight))
+    const canvas = document.createElement("canvas")
+    canvas.width = Math.round(video.videoWidth * scale)
+    canvas.height = Math.round(video.videoHeight * scale)
+
+    const ctx = canvas.getContext("2d")
+    if (!ctx) return
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) {
+          setError("Could not capture the photo. Please try again.")
+          setStatus("error")
+          return
+        }
+        const captured = new File([blob], `label-${Date.now()}.jpg`, { type: "image/jpeg" })
+        stopCamera()
+        accept(captured)
+      },
+      "image/jpeg",
+      0.92
+    )
   }
 
   const onPick = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -148,10 +258,16 @@ export function ImageUploader({ onAnalyzed }: Props) {
               <Button size="sm" onClick={() => fileInput.current?.click()} className="shadow-2xs">
                 <UploadCloud className="mr-2 h-4 w-4" /> Choose File
               </Button>
-              <Button size="sm" variant="outline" onClick={() => cameraInput.current?.click()}>
-                <Camera className="mr-2 h-4 w-4" /> Camera
+              <Button size="sm" variant="outline" onClick={openCamera}>
+                <Camera className="mr-2 h-4 w-4" /> Open Camera
               </Button>
             </div>
+            {cameraError && (
+              <div className="mx-auto mt-3 flex max-w-md items-start justify-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-2 text-left text-xs text-destructive">
+                <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                <span>{cameraError}</span>
+              </div>
+            )}
           </div>
         )}
 
@@ -197,6 +313,41 @@ export function ImageUploader({ onAnalyzed }: Props) {
                 "Run Truth Mode Analysis"
               )}
             </Button>
+          </div>
+        )}
+
+        {cameraOpen && (
+          <div
+            className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-black/80 p-4"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Camera capture"
+          >
+            <div className="relative w-full max-w-lg overflow-hidden rounded-xl border border-white/15 bg-black">
+              <video
+                ref={videoRef}
+                playsInline
+                muted
+                autoPlay
+                className="h-auto max-h-[70vh] w-full object-contain"
+              />
+              {cameraStarting && (
+                <div className="absolute inset-0 flex items-center justify-center gap-2 text-sm text-white">
+                  <Loader2 className="h-4 w-4 animate-spin" /> Starting camera…
+                </div>
+              )}
+            </div>
+            <p className="max-w-sm text-center text-xs text-white/70">
+              Point the camera at the product label, then press Capture.
+            </p>
+            <div className="flex items-center gap-2">
+              <Button onClick={capturePhoto} disabled={cameraStarting || !stream}>
+                <Camera className="mr-2 h-4 w-4" /> Capture
+              </Button>
+              <Button variant="outline" onClick={stopCamera}>
+                <X className="mr-2 h-4 w-4" /> Cancel
+              </Button>
+            </div>
           </div>
         )}
 
