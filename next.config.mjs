@@ -7,6 +7,7 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  transpilePackages: ["motion", "react-use-measure"],
 }
 
 export default nextConfig

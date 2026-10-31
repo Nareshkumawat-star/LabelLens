@@ -2,11 +2,7 @@
 
 import React, { useState, type FC } from 'react';
 import { motion, MotionConfig, type Transition } from 'motion/react';
-import { ChevronDown, Send } from 'lucide-react';
-import { HiCursorArrowRipple } from 'react-icons/hi2';
-import { Layers } from 'lucide-react';
-import { IoIosTimer } from 'react-icons/io';
-import { PiHandTap } from 'react-icons/pi';
+import { ChevronDown, Send, Layers, MousePointerClick, Timer, Hand } from 'lucide-react';
 import useMeasure from 'react-use-measure';
 
 export interface AccordionItemData {
@@ -41,7 +37,7 @@ const DEFAULT_ITEMS: AccordionItemData[] = [
   {
     id: 1,
     title: 'What is Interaction Design?',
-    icon: <HiCursorArrowRipple className="size-3 -rotate-10 md:size-4" />,
+    icon: <MousePointerClick className="size-3 -rotate-10 md:size-4" />,
     content:
       'Interaction design focuses on creating engaging interfaces with well-thought-out behaviors and actions.',
   },
@@ -55,7 +51,7 @@ const DEFAULT_ITEMS: AccordionItemData[] = [
   {
     id: 3,
     title: 'Usability & Accessibility',
-    icon: <PiHandTap size={26} className="-rotate-20" />,
+    icon: <Hand size={26} className="-rotate-20" />,
     content:
       'Designing experiences that are easy to use and accessible to people of all abilities.',
   },
@@ -69,7 +65,7 @@ const DEFAULT_ITEMS: AccordionItemData[] = [
   {
     id: 5,
     title: 'UX Optimisation',
-    icon: <IoIosTimer size={26} />,
+    icon: <Timer size={26} />,
     content:
       'Improving user experience by analyzing behavior and refining interactions over time.',
   },
