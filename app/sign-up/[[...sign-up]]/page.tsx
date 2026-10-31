@@ -1,3 +1,4 @@
+import { Suspense } from "react"
 import { SignUp } from "@clerk/nextjs"
 
 import { isClerkConfigured } from "@/lib/auth"
@@ -17,7 +18,9 @@ export default function SignUpPage() {
 
   return (
     <div className="flex justify-center py-12">
-      <SignUp />
+      <Suspense fallback={<div className="h-96 w-96 animate-pulse rounded-xl bg-muted/40" />}>
+        <SignUp />
+      </Suspense>
     </div>
   )
 }
