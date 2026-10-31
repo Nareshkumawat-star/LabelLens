@@ -71,6 +71,10 @@ const ReportSchema = new Schema(
 
 const ScanSchema = new Schema(
   {
+    /** Clerk user id of the account that created this scan.
+     *  Null only for scans created before accounts existed — those are never
+     *  returned to anyone, so they cannot be claimed or leaked. */
+    userId: { type: String, default: null },
     productName: { type: String, default: null },
     brand: { type: String, default: null },
     category: { type: String, default: null },
@@ -80,7 +84,7 @@ const ScanSchema = new Schema(
   { timestamps: true }
 )
 
-ScanSchema.index({ createdAt: -1 })
+ScanSchema.index({ userId: 1, createdAt: -1 })
 
 export const Scan: Model<mongoose.InferSchemaType<typeof ScanSchema>> =
   mongoose.models.Scan || mongoose.model("Scan", ScanSchema)
