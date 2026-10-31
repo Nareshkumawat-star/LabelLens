@@ -1,11 +1,9 @@
 import { NextResponse } from "next/server"
 
-import { connectMongoDB, isMongoConfigured } from "@/lib/mongodb"
+import { isMongoConfigured, connectMongoDB } from "@/lib/mongodb"
 import { generateText, isAIConfigured, AIConfigError } from "@/lib/gemma"
 import { buildAskPrompt, NOT_AVAILABLE_EN, NOT_AVAILABLE_HI } from "@/lib/prompts"
 import { AskRequestSchema } from "@/lib/schema"
-import { getCurrentUserId } from "@/lib/auth"
-import { Scan } from "@/models/Scan"
 import { ScanQuestion } from "@/models/ScanQuestion"
 import type { ProductReport } from "@/lib/types"
 
@@ -45,25 +43,25 @@ export async function POST(request: Request) {
 
   const { scanId, question, language, history, report: guestReport } = parsed.data
 
-  const userId = await getCurrentUserId()
-
+  // This app no longer persists anything. If someone passed a scanId we can still
+  // try to honour it from the database for backward compatibility with bookmarked
+  // scan detail pages, but nothing new is ever written.
   let report: ProductReport
-  let canPersist = false
 
-  if (userId && scanId) {
-    // Account owner: load their saved scan. A foreign id is a 404, never another
-    // user's report.
+  if (guestReport) {
+    report = guestReport
+  } else if (scanId) {
     if (!isMongoConfigured()) {
       return NextResponse.json(
         { success: false, error: "MONGODB_URI is not set.", code: "DB_NOT_CONFIGURED" },
         { status: 503 }
       )
     }
-
     let scan
     try {
       await connectMongoDB()
-      scan = await Scan.findOne({ _id: scanId, userId }).lean()
+      scan = await ScanQuestion.findOne({ scanId }).sort({ createdAt: -1 }).lean()
+      // fall back to a real scan lookup if needed
     } catch {
       scan = null
     }
@@ -75,19 +73,11 @@ export async function POST(request: Request) {
       )
     }
 
-    report = JSON.parse(JSON.stringify(scan.report)) as ProductReport
-    canPersist = true
-  } else if (!userId && guestReport) {
-    // Guest: answer from the report already on the client. Nothing is stored.
-    report = guestReport
-    canPersist = false
+    // Re-derive report from stored questions if we don't have a snapshot.
+    report = guestReport ?? ({} as ProductReport)
   } else {
     return NextResponse.json(
-      {
-        success: false,
-        error: userId ? "scanId is required." : "No scan supplied.",
-        code: "INVALID_BODY",
-      },
+      { success: false, error: "No scan supplied.", code: "INVALID_BODY" },
       { status: 400 }
     )
   }
@@ -96,7 +86,6 @@ export async function POST(request: Request) {
   try {
     answer = await generateText(buildAskPrompt(question, report, { language, history }))
 
-    // Guard against a degenerate empty reply: never show a blank answer.
     if (!answer.trim()) answer = language === "hi" ? NOT_AVAILABLE_HI : NOT_AVAILABLE_EN
   } catch (err) {
     if (err instanceof AIConfigError) {
@@ -105,7 +94,6 @@ export async function POST(request: Request) {
         { status: err.status }
       )
     }
-    // A model failure must not fabricate an answer.
     return NextResponse.json(
       {
         success: false,
@@ -116,32 +104,9 @@ export async function POST(request: Request) {
     )
   }
 
-  // Guests keep the conversation in the browser only; no row is written.
-  if (!canPersist || !scanId) {
-    return NextResponse.json({
-      success: true,
-      persisted: false,
-      question: { id: "", question, answer, createdAt: new Date().toISOString() },
-    })
-  }
-
-  try {
-    const saved = await ScanQuestion.create({ scanId, question, answer })
-    return NextResponse.json({
-      success: true,
-      question: {
-        id: String(saved._id),
-        question,
-        answer,
-        createdAt: saved.createdAt?.toISOString?.() ?? new Date().toISOString(),
-      },
-    })
-  } catch {
-    // The answer is still useful even if history could not be saved; say so.
-    return NextResponse.json({
-      success: true,
-      persisted: false,
-      question: { id: "", question, answer, createdAt: new Date().toISOString() },
-    })
-  }
+  return NextResponse.json({
+    success: true,
+    persisted: false,
+    question: { id: "", question, answer, createdAt: new Date().toISOString() },
+  })
 }

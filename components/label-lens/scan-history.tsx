@@ -26,25 +26,17 @@ interface ScanHistoryProps {
 export function ScanHistory({ refreshKey = 0, onSelectScan, activeScanId }: ScanHistoryProps) {
   const [scans, setScans] = React.useState<ScanSummary[] | null>(null)
   const [error, setError] = React.useState<string | null>(null)
-  const [guest, setGuest] = React.useState(false)
   const [busyId, setBusyId] = React.useState<string | null>(null)
   const [showAll, setShowAll] = React.useState(false)
 
   React.useEffect(() => {
     let cancelled = false
     setError(null)
-    setGuest(false)
 
     fetch("/api/scans")
       .then(async (res) => {
         const data = await res.json()
         if (cancelled) return
-        if (res.status === 401) {
-          // Guest: nothing was ever stored for them, so there is nothing to list.
-          setGuest(true)
-          setScans([])
-          return
-        }
         if (!res.ok || !data.success) {
           setError(data?.error ?? "Could not load history.")
           setScans([])
@@ -130,26 +122,11 @@ export function ScanHistory({ refreshKey = 0, onSelectScan, activeScanId }: Scan
           </p>
         )}
 
-        {scans !== null && scans.length === 0 && !error && guest && (
-          <div className="rounded-xl border border-dashed p-6 text-center">
-            <p className="text-xs font-semibold text-foreground">
-              Guest mode — nothing is stored for you
-            </p>
-            <p className="mt-1 max-w-sm text-[11px] leading-relaxed text-muted-foreground">
-              Scans you run without an account are analyzed but never saved to the database, so
-              there is no history to show.
-            </p>
-            <Button asChild size="sm" variant="outline" className="mt-3 h-8 text-xs">
-              <Link href="/sign-up">Create an account</Link>
-            </Button>
-          </div>
-        )}
-
-        {scans !== null && scans.length === 0 && !error && !guest && (
+        {scans !== null && scans.length === 0 && !error && (
           <div className="rounded-xl border border-dashed p-6 text-center">
             <p className="text-xs font-semibold text-foreground">No food scans recorded yet</p>
             <p className="text-[11px] text-muted-foreground mt-0.5">
-              Upload or snap a product label below to see your first verified report here.
+              Upload or snap a product label to see your verified reports here.
             </p>
           </div>
         )}

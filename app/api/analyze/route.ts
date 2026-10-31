@@ -4,7 +4,6 @@ import { connectMongoDB, isMongoConfigured } from "@/lib/mongodb"
 import { generateFromImage, isAIConfigured, AIConfigError, AIResponseError } from "@/lib/gemma"
 import { buildAnalysisPrompt } from "@/lib/prompts"
 import { parseAIOutput } from "@/lib/schema"
-import { getCurrentUserId } from "@/lib/auth"
 import { Scan } from "@/models/Scan"
 
 export const runtime = "nodejs"
@@ -73,59 +72,48 @@ export async function POST(request: Request) {
   }
   const report = parsed.report
 
-  // 3. Persist the report (never the image) — accounts only.
-  // A guest gets the real analysis but nothing is written to the database.
-  const userId = await getCurrentUserId()
-
-  if (!userId) {
-    return NextResponse.json({
-      success: true,
-      saved: false,
-      scan: {
-        id: "",
+  // 3. Persist the report (never the raw image).
+  if (isMongoConfigured()) {
+    try {
+      await connectMongoDB()
+      const doc = await Scan.create({
         productName: report.productName,
         brand: report.brand,
         category: report.category,
         imageUrl: null,
-        createdAt: new Date().toISOString(),
         report,
-      },
-    })
+      })
+
+      return NextResponse.json({
+        success: true,
+        saved: true,
+        scan: {
+          id: String(doc._id),
+          productName: report.productName,
+          brand: report.brand,
+          category: report.category,
+          imageUrl: null,
+          createdAt: doc.createdAt?.toISOString?.() ?? new Date().toISOString(),
+          report,
+        },
+      })
+    } catch (err) {
+      // Continue and return the in-memory scan report even if Mongo save fails
+      console.error("MongoDB save error:", err)
+    }
   }
 
-  if (!isMongoConfigured()) {
-    return fail("MONGODB_URI is not set, so the scan cannot be saved.", "DB_NOT_CONFIGURED", 503)
-  }
-
-  try {
-    await connectMongoDB()
-    const doc = await Scan.create({
-      userId,
+  return NextResponse.json({
+    success: true,
+    saved: false,
+    scan: {
+      id: "",
       productName: report.productName,
       brand: report.brand,
       category: report.category,
       imageUrl: null,
+      createdAt: new Date().toISOString(),
       report,
-    })
-
-    return NextResponse.json({
-      success: true,
-      saved: true,
-      scan: {
-        id: String(doc._id),
-        productName: report.productName,
-        brand: report.brand,
-        category: report.category,
-        imageUrl: null,
-        createdAt: doc.createdAt?.toISOString?.() ?? new Date().toISOString(),
-        report,
-      },
-    })
-  } catch (err) {
-    return fail(
-      `Could not save the scan: ${err instanceof Error ? err.message : String(err)}`,
-      "DB_ERROR",
-      500
-    )
-  }
+    },
+  })
 }

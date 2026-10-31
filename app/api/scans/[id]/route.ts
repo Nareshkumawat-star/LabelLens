@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server"
 
 import { connectMongoDB, isMongoConfigured } from "@/lib/mongodb"
-import { getCurrentUserId } from "@/lib/auth"
 import { Scan } from "@/models/Scan"
 import { ScanQuestion } from "@/models/ScanQuestion"
 
@@ -15,14 +14,6 @@ export async function GET(_request: Request, { params }: Ctx) {
     return NextResponse.json(
       { success: false, error: "MONGODB_URI is not set.", code: "DB_NOT_CONFIGURED" },
       { status: 503 }
-    )
-  }
-
-  const userId = await getCurrentUserId()
-  if (!userId) {
-    return NextResponse.json(
-      { success: false, error: "Sign in to view saved scans.", code: "UNAUTHENTICATED" },
-      { status: 401 }
     )
   }
 
@@ -40,8 +31,7 @@ export async function GET(_request: Request, { params }: Ctx) {
   }
 
   try {
-    // Ownership filter: a foreign id behaves exactly like a missing one.
-    const scan = await Scan.findOne({ _id: params.id, userId }).lean()
+    const scan = await Scan.findById(params.id).lean()
     if (!scan) {
       return NextResponse.json(
         { success: false, error: "Scan not found.", code: "SCAN_NOT_FOUND" },
@@ -58,7 +48,7 @@ export async function GET(_request: Request, { params }: Ctx) {
         productName: scan.productName ?? null,
         brand: scan.brand ?? null,
         category: scan.category ?? null,
-        imageUrl: scan.imageUrl ?? null,
+        imageUrl: null,
         createdAt: scan.createdAt?.toISOString?.() ?? new Date().toISOString(),
         report: scan.report,
       },
@@ -69,10 +59,14 @@ export async function GET(_request: Request, { params }: Ctx) {
         createdAt: q.createdAt?.toISOString?.() ?? new Date().toISOString(),
       })),
     })
-  } catch {
+  } catch (err) {
     return NextResponse.json(
-      { success: false, error: "Invalid scan id.", code: "INVALID_ID" },
-      { status: 400 }
+      {
+        success: false,
+        error: `Database error: ${err instanceof Error ? err.message : String(err)}`,
+        code: "DB_ERROR",
+      },
+      { status: 500 }
     )
   }
 }
@@ -85,29 +79,21 @@ export async function DELETE(_request: Request, { params }: Ctx) {
     )
   }
 
-  const userId = await getCurrentUserId()
-  if (!userId) {
-    return NextResponse.json(
-      { success: false, error: "Sign in to manage saved scans.", code: "UNAUTHENTICATED" },
-      { status: 401 }
-    )
-  }
-
   try {
     await connectMongoDB()
-    const deleted = await Scan.findOneAndDelete({ _id: params.id, userId })
-    if (!deleted) {
-      return NextResponse.json(
-        { success: false, error: "Scan not found.", code: "SCAN_NOT_FOUND" },
-        { status: 404 }
-      )
-    }
-    await ScanQuestion.deleteMany({ scanId: params.id })
+    await Promise.all([
+      Scan.findByIdAndDelete(params.id),
+      ScanQuestion.deleteMany({ scanId: params.id }),
+    ])
     return NextResponse.json({ success: true })
-  } catch {
+  } catch (err) {
     return NextResponse.json(
-      { success: false, error: "Invalid scan id.", code: "INVALID_ID" },
-      { status: 400 }
+      {
+        success: false,
+        error: `Could not delete scan: ${err instanceof Error ? err.message : String(err)}`,
+        code: "DB_ERROR",
+      },
+      { status: 500 }
     )
   }
 }

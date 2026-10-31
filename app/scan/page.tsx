@@ -8,7 +8,6 @@ import {
   Sparkles,
   History,
   ShieldCheck,
-  ShieldAlert,
   CheckCircle2,
 } from "lucide-react"
 
@@ -143,19 +142,6 @@ export default function ScanPage() {
               </Button>
             </div>
           </div>
-
-          {!saved && (
-            <div className="flex flex-wrap items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-800 dark:text-amber-300">
-              <ShieldAlert className="h-3.5 w-3.5 shrink-0" />
-              <span>
-                Guest mode: this report is real, but nothing has been stored. Sign in to keep it in
-                your history.
-              </span>
-              <Link href="/sign-in" className="font-semibold underline underline-offset-2">
-                Sign in
-              </Link>
-            </div>
-          )}
 
           <div className="grid gap-6 lg:grid-cols-3">
             <div className="space-y-6 lg:col-span-2">
