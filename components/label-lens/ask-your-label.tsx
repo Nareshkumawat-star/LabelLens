@@ -12,12 +12,58 @@ interface Props {
   initialQuestions?: ScanQuestionRecord[]
 }
 
-const SUGGESTIONS = [
-  "Does this contain added sugar?",
-  "Which allergens are declared?",
-  "What is the serving size?",
-  "What could not be read on this label?",
-]
+interface Gloss {
+  en: Record<string, string>
+  hi: Record<string, string>
+}
+
+const GLOSS: Gloss = {
+  en: {
+    "no questions yet": "No questions yet",
+    "tap a suggested question below or type your own question about ingredients": "Tap a suggested question below or type your own question about ingredients",
+    "synthesizing verified answer": "Synthesizing verified answer",
+    "suggested inquiries": "Suggested Inquiries",
+    "ask about this label": "Ask about this label",
+    "grounded q&a. answers draw strictly from this product's verified analysis.": "Grounded Q&A. Answers draw strictly from this product's verified analysis.",
+    "send question": "Send Question",
+  },
+  hi: {
+    "no questions yet": "अभी कोई प्रश्न नहीं",
+    "tap a suggested question below or type your own question about ingredients": "नीचे Suggested प्रश्न टैप करें या स्वयं अपना प्रश्न टाइप करें",
+    "synthesizing verified answer": "सत्यापित उत्तर संश्लेषित कर रहे हैं",
+    "suggested inquiries": "सुझाए गए प्रश्न",
+    "ask about this label": "इस लेबल के बारे में पूछें",
+    "grounded q&a. answers draw strictly from this product's verified analysis.": "गrounded Q&A. उत्तर केवल इस प्रोडक्ट के सत्यापित विश्लेषण से लेते हैं।",
+    "send question": "प्रश्न भेजें",
+  },
+}
+
+function G({ en, hi }: { en: string; hi: string }) {
+  const [lang, setLang] = React.useState<"en" | "hi">("en")
+  const t = lang === "en" ? en : hi
+  return (
+    <div className="flex items-center gap-1 rounded-lg border border-border/60 bg-muted/10 p-0.5">
+      <button
+        type="button"
+        onClick={() => setLang("en")}
+        className={`rounded-md px-2.5 py-1 text-[11px] font-semibold transition-colors ${
+          lang === "en" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+        }`}
+      >
+        {en}
+      </button>
+      <button
+        type="button"
+        onClick={() => setLang("hi")}
+        className={`rounded-md px-2.5 py-1 text-[11px] font-semibold transition-colors ${
+          lang === "hi" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+        }`}
+      >
+        {hi}
+      </button>
+    </div>
+  )
+}
 
 export function AskYourLabel({ scanId, initialQuestions = [] }: Props) {
   const [history, setHistory] = React.useState<ScanQuestionRecord[]>(initialQuestions)
@@ -61,29 +107,32 @@ export function AskYourLabel({ scanId, initialQuestions = [] }: Props) {
     }
   }
 
+  const EN = GLOSS.en
+  const HI = GLOSS.hi
+
   return (
-    <Card className="border bg-card shadow-xs">
+    <Card className="border bg-card shadow-sm">
       <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-lg font-bold">
-          <MessageCircle className="h-5 w-5 text-primary shrink-0" />
-          <span>Ask Your Label</span>
-        </CardTitle>
+        <div className="flex items-center justify-between gap-3">
+          <CardTitle className="flex items-center gap-2 text-lg font-bold">
+            <MessageCircle className="h-5 w-5 text-primary shrink-0" />
+            <span>{EN?.["ask about this label"] ?? "Ask Your Label"}</span>
+          </CardTitle>
+          <G en={EN?.["grounded q&a. answers draw strictly from this product's verified analysis."] ?? "Grounded Q&A..."} hi={HI?.["grounded q&a. answers draw strictly from this product's verified analysis."] ?? "गrounded Q&A..."} />
+        </div>
         <p className="text-xs text-muted-foreground leading-relaxed">
-          Grounded Q&A. Answers draw strictly from this product&apos;s verified analysis.
+          {EN?.["grounded q&a. answers draw strictly from this product's verified analysis."] ?? "Grounded Q&A. Answers draw strictly from this product's verified analysis."}
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Chat History Container */}
-        <div
-          ref={scrollRef}
-          className="max-h-80 min-h-[140px] space-y-3 overflow-y-auto rounded-lg border bg-muted/20 p-3"
-        >
+        {/* Chat History */}
+        <div ref={scrollRef} className="max-h-80 min-h-[140px] space-y-3 overflow-y-auto rounded-lg border bg-muted/20 p-3">
           {history.length === 0 && !busy && (
             <div className="flex flex-col items-center justify-center py-6 text-center">
               <Sparkles className="h-6 w-6 text-muted-foreground/60 mb-2" />
-              <p className="text-xs font-semibold text-foreground">No questions yet</p>
+              <p className="text-xs font-semibold text-foreground">{EN?.["no questions yet"] ?? "No questions yet"}</p>
               <p className="text-[11px] text-muted-foreground mt-0.5 max-w-[200px]">
-                Tap a suggested question below or type your own question about ingredients.
+                {EN?.["tap a suggested question below or type your own question about ingredients"] ?? "Tap a suggested question below or type your own question about ingredients"}
               </p>
             </div>
           )}
@@ -106,14 +155,14 @@ export function AskYourLabel({ scanId, initialQuestions = [] }: Props) {
           {busy && (
             <div className="flex items-center gap-2 text-xs text-muted-foreground italic py-1">
               <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
-              <span>Synthesizing verified answer…</span>
+              <span>{EN?.["synthesizing verified answer"] ?? "Synthesizing verified answer"}</span>
             </div>
           )}
         </div>
 
-        {/* Quick Suggestion Chips */}
-        <div className="space-y-1.5">
-          <div className="text-[11px] font-semibold text-muted-foreground">Suggested Inquiries</div>
+        {/* Suggested questions chips */}
+        <div className="space-y-2">
+          <div className="text-[11px] font-semibold text-muted-foreground">{EN?.["suggested inquiries"] ?? "Suggested Inquiries"}</div>
           <div className="flex flex-wrap gap-1.5">
             {SUGGESTIONS.map((s, idx) => (
               <button
@@ -135,7 +184,7 @@ export function AskYourLabel({ scanId, initialQuestions = [] }: Props) {
           </p>
         )}
 
-        {/* Input Form */}
+        {/* Input */}
         <form
           className="flex items-center gap-2"
           onSubmit={(e) => {
@@ -146,21 +195,23 @@ export function AskYourLabel({ scanId, initialQuestions = [] }: Props) {
           <input
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
-            placeholder="Ask about this label…"
+            placeholder={EN?.["ask about this label"] ?? "Ask about this label…"}
             maxLength={500}
             className="flex-1 rounded-lg border bg-background px-3 py-2 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
           />
-          <Button
-            type="submit"
-            size="icon"
-            disabled={busy || !question.trim()}
-            className="h-9 w-9 shrink-0"
-          >
+          <Button type="submit" size="icon" disabled={busy || !question.trim()} className="h-9 w-9 shrink-0">
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-            <span className="sr-only">Send Question</span>
+            <span className="sr-only">{EN?.["send question"] ?? "Send Question"}</span>
           </Button>
         </form>
       </CardContent>
     </Card>
   )
 }
+
+const SUGGESTIONS = [
+  "Does this contain added sugar?",
+  "Which allergens are declared?",
+  "What is the serving size?",
+  "What could not be read on this label?",
+]

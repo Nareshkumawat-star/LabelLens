@@ -2,10 +2,10 @@
 
 **Understand what's inside. Scan a product label and see what it actually says.**
 
-LabelLens is a multimodal product-label assistant built on Next.js. You upload or photograph a
-product label; the image is sent to a Google GenAI multimodal model; the structured result is
-validated with Zod; the report is saved to MongoDB Atlas and rendered with **Label Truth Mode**,
-which keeps three things strictly apart:
+LabelLens is a multimodal product-label assistant built on Next.js. You upload or
+photograph a product label; the image is sent to a Google GenAI multimodal model;
+the structured result is validated with Zod; the report is saved to MongoDB Atlas
+and rendered with **Label Truth Mode**, which keeps three things strictly apart:
 
 | Bucket | Meaning |
 | --- | --- |
@@ -27,8 +27,8 @@ which keeps three things strictly apart:
   *"This information is not available in the scanned label."*
 - **No sample data** — the previous `sample-data.ts` fallback was removed.
 
-The uploaded **image is not stored**. It lives in memory for the duration of the model call and is
-discarded. `imageUrl` is intentionally `null`; the app does not claim the image is retained.
+The uploaded **image is not stored**. It lives in memory for the duration of the model call and
+is discarded. `imageUrl` is intentionally `null`; the app does not claim the image is retained.
 
 ---
 
@@ -39,7 +39,42 @@ discarded. `imageUrl` is intentionally `null`; the app does not claim the image 
 - MongoDB Atlas + Mongoose
 - `@google/genai` (Google GenAI SDK)
 - Zod for the model-output contract
-- Deploy target: **Render**
+- Deploy target: **Render** (see `render.yml`)
+
+---
+
+## The user-visible experience
+
+1. **Scan** — upload, drag & drop, or photograph a product label.
+2. **Understand What's Inside** — the analysis dashboard splits every result into three visible
+   buckets: **On Label** (verbatim text), **AI Explanation** (model-written context), and
+   **Not Verified** (unreadable/missing items).
+3. **Ask Your Label** — ask a question about the scanned product. The model answers only from the
+   saved report. If the answer is not in the report it replies:
+
+   > *This information is not available in the scanned label.*
+
+   The question and answer are saved to MongoDB per scan, so the conversation survives page
+   reloads.
+
+4. **Scan History** — see your previous scans and delete them. No authentication, so data is
+   shared demo data; nothing here claims per-user account isolation.
+
+### Language toggle
+
+Every report page has an **English / हिन्दी** toggle. The UI, section titles, and placeholder
+text switch between the two languages, while the **ingredients, nutrition, and warnings stay
+verbatim from the label** — the AI still transcribes printed text exactly as it appears.
+
+### "Eat healthy" cues on the report
+
+A light, deterministic heuristic reads the extracted nutrition values and adds green/amber pills
+(never medical claims):
+
+- `high sugar` · `high sodium` · `high saturated fat` · `low fiber` — amber
+- `high fiber` · `no artificial additives` — green
+
+It simply labels numbers; it does not score, rank, or diagnose.
 
 ---
 
@@ -67,6 +102,7 @@ components/label-lens/
   report-view.tsx          Label Truth Mode + nutrition + allergens + warnings
   ask-your-label.tsx       chat over the saved report
   scan-history.tsx         recent scans, view + delete
+render.yml                 Render one-click service manifest
 ```
 
 ---
@@ -77,7 +113,7 @@ Copy `.env.example` to `.env.local` for local development:
 
 ```env
 GEMINI_API_KEY=
-GEMMA_MODEL=gemini-2.0-flash
+GEMMA_MODEL=gemini-2.5-flash
 MONGODB_URI=mongodb+srv://<user>:<password>@<cluster>.mongodb.net/labellens
 ```
 
@@ -117,16 +153,17 @@ Indexes declared on the models: `Scan.createdAt` (descending) and
 
 ## Deploy to Render
 
+`render.yml` is ready for a one-click Web Service.
+
 1. Push the repository to GitHub.
 2. Render → **New → Web Service**, connect the repo.
 3. Runtime: **Node**
-4. Build command: `npm install && npm run build`
-5. Start command: `npm start`
+4. Build command: `npm run build`
+5. Start command: `npm run start`
 6. Environment variables:
    - `GEMINI_API_KEY`
    - `MONGODB_URI`
-   - `GEMMA_MODEL` (optional)
-   - `PORT` is provided by Render; `npm start` binds to it automatically.
+   - `GEMMA_MODEL` (optional, defaults to `gemini-2.5-flash`)
 
 Notes:
 - API routes declare `runtime = "nodejs"` — they need Node, not the edge runtime.

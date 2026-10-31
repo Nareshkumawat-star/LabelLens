@@ -3,7 +3,7 @@
 import * as React from "react"
 import Link from "next/link"
 import { useParams } from "next/navigation"
-import { ArrowLeft, Loader2, AlertCircle, Calendar, ShieldCheck, Plus } from "lucide-react"
+import { ArrowLeft, Loader2, AlertCircle, Calendar, ShieldCheck, Plus, History } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"

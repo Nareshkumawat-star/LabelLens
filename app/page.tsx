@@ -1,15 +1,14 @@
 "use client"
 
 import * as React from "react"
-import { ScanLine, Sparkles, ShieldCheck, Cpu, ArrowUpRight } from "lucide-react"
+import { ScanLine, Sparkles, ArrowRight } from "lucide-react"
+import Link from "next/link"
 
 import { Badge } from "@/components/ui/badge"
 import { ImageUploader } from "@/components/label-lens/image-uploader"
 import { ReportView } from "@/components/label-lens/report-view"
 import { AskYourLabel } from "@/components/label-lens/ask-your-label"
 import { ScanHistory } from "@/components/label-lens/scan-history"
-import { StylishBanner } from "@/components/watermelon/stylish-banner"
-import { WatermelonFaqAccordion } from "@/components/watermelon/watermelon-faq-accordion"
 import type { ScanRecord } from "@/lib/types"
 
 export default function IndexPage() {
@@ -37,13 +36,10 @@ export default function IndexPage() {
               <Badge variant="outline" className="text-xs font-semibold px-2.5 py-0.5 border-primary/25 bg-primary/5">
                 Multimodal AI
               </Badge>
-              <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/25">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-600 dark:bg-emerald-400" />
-                Truth Mode Active
-              </span>
             </div>
             <p className="max-w-2xl text-sm sm:text-base text-muted-foreground leading-relaxed">
-              Understand what is actually printed inside your packaged food. Scan any label to rigorously separate printed ingredients, AI explanations, and unverified data with zero guesswork.
+              Understand what is printed inside your packaged food. Scan any label to rigorously separate printed
+              ingredients, AI explanations, and unverified data with zero guesswork.
             </p>
           </div>
 
@@ -59,8 +55,42 @@ export default function IndexPage() {
           </div>
         </div>
 
-        {/* Feature Ticker & Capability Highlights */}
-        <StylishBanner />
+        <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-4">
+          {[
+            {
+              icon: "upload",
+              title: "Upload a label",
+              desc: "Snap or drop any product photo",
+              color: "border-emerald-500/25 bg-emerald-500/5",
+            },
+            {
+              icon: "analyze",
+              title: "Gemma 4 analyzes",
+              desc: "Extracts ingredients, nutrition, warnings",
+              color: "border-sky-500/25 bg-sky-500/5",
+            },
+            {
+              icon: "truth",
+              title: "Label Truth Mode",
+              desc: "Anything unreadable is marked",
+              color: "border-amber-500/25 bg-amber-500/5",
+            },
+            {
+              icon: "ask",
+              title: "Ask Your Label",
+              desc: "Chat with the verified report",
+              color: "border-blue-500/25 bg-blue-500/5",
+            },
+          ].map((f) => (
+            <div key={f.title} className={`rounded-xl border p-4 shadow-sm ${f.color}`}>
+              <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{f.title}</div>
+              <p className="mt-1 text-sm font-bold text-foreground">{f.desc}</p>
+              <Link href="/" className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline">
+                Learn more <ArrowRight className="h-3 w-3" />
+              </Link>
+            </div>
+          ))}
+        </div>
       </header>
 
       {/* Upload Zone */}
@@ -93,15 +123,11 @@ export default function IndexPage() {
           </div>
           <h3 className="mt-4 text-base font-bold text-foreground">No label analyzed yet</h3>
           <p className="mx-auto mt-1 max-w-md text-xs text-muted-foreground leading-relaxed">
-            Upload or photograph any food or beverage label above. The image will be parsed in-memory by Gemma and verified under Label Truth Mode.
+            Upload or photograph any food or beverage label above. The image will be parsed in-memory by Gemma and
+            verified under Label Truth Mode.
           </p>
         </section>
       )}
-
-      {/* Watermelon Interactive FAQ & Verification Architecture */}
-      <section className="pt-2">
-        <WatermelonFaqAccordion />
-      </section>
 
       {/* Scan History */}
       <section className="pt-2">
@@ -113,11 +139,19 @@ export default function IndexPage() {
         <div className="flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-primary shrink-0" />
           <p>
-            LabelLens is an informational transparency tool. It does not provide medical diagnosis and does not classify products as healthy or unsafe.
+            LabelLens is an informational transparency tool. It does not provide medical diagnosis and does not
+            classify products as healthy or unsafe.
           </p>
         </div>
-        <div className="flex items-center gap-3 shrink-0 font-medium">
-          <span className="font-mono text-[11px]">Powered by Gemma + Watermelon UI</span>
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          <a
+            href="https://github.com"
+            target="_blank"
+            rel="noreferrer"
+            className="font-mono text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+          >
+            GitHub
+          </a>
         </div>
       </footer>
     </div>
