@@ -1,42 +1,30 @@
-# Render — LabelLens
+# Render Blueprint for LabelLens (Next.js App Router)
 #
-# Deploy this Next.js App Router app to Render with a single click.
-# Render auto-detects the framework and runs `npm install` + `npm run build`.
+# Deploy: Render Dashboard -> New + -> Blueprint -> pick this repo.
+# Render reads this file, then asks you to fill in the two secret values
+# (`sync: false`) because they cannot be committed to git.
 #
-# Environment variables must be set on the Render Web Service (Dashboard ->
-# Environment). Do NOT commit real secrets.
-#
-# Required:
-#   GEMINI_API_KEY      Google Gemini API key (free tier, vision + text)
-#   GEMMA_MODEL         Model id: gemini-2.5-flash (free tier)
-#   MONGODB_URI         MongoDB Atlas connection string
-#
-# Optional:
-#   PORT                Render injects this automatically for serverless/web
-#   NODE_ENV            "production" (render sets it)
-#
-# One-click deploy:
-#   1. New + -> Web Service
-#   2. Connect your GitHub repository
-#   3. Set the three env vars above
-#   4. Build Command:  npm run build
-#   5. Start Command:  npm run start
-#   6. Instance Type:  Free (or Standard for cold-start tolerance)
+# Values you will be prompted for:
+#   GEMINI_API_KEY   Google AI Studio key  (https://aistudio.google.com/apikey)
+#   MONGODB_URI      MongoDB Atlas connection string (include /labellens)
 
 services:
   - type: web
     name: labellens
     runtime: node
-    buildCommand: npm run build
+    plan: free
+    region: singapore
+    branch: main
+    buildCommand: npm install && npm run build
     startCommand: npm run start
+    healthCheckPath: /
+    autoDeploy: true
     envVars:
+      # sync: false -> Render prompts for the value at deploy time and stores it
+      # as a secret on the service. Never put real keys in this file.
       - key: GEMINI_API_KEY
-        value: "{{GEMINI_API_KEY}}"   # set in dashboard, never commit
+        sync: false
+      - key: MONGODB_URI
+        sync: false
       - key: GEMMA_MODEL
         value: gemini-2.5-flash
-      - key: MONGODB_URI
-        value: "{{MONGODB_URI}}"      # set in dashboard, never commit
-      - key: PORT
-        value: "3000"
-      - key: NODE_ENV
-        value: production

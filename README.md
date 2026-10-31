@@ -153,22 +153,32 @@ Indexes declared on the models: `Scan.createdAt` (descending) and
 
 ## Deploy to Render
 
-`render.yml` is ready for a one-click Web Service.
+### Blueprint (`render.yml`)
 
 1. Push the repository to GitHub.
-2. Render → **New → Web Service**, connect the repo.
-3. Runtime: **Node**
-4. Build command: `npm run build`
-5. Start command: `npm run start`
-6. Environment variables:
+2. Render → **New + → Blueprint**, connect the repo. `render.yml` is auto-detected at the root.
+3. Render prompts for the two secrets declared with `sync: false`:
    - `GEMINI_API_KEY`
    - `MONGODB_URI`
-   - `GEMMA_MODEL` (optional, defaults to `gemini-2.5-flash`)
+4. Click **Deploy Blueprint**. `GEMMA_MODEL` defaults to `gemini-2.5-flash` and can be changed
+   later in the service's Environment tab.
+
+The service is declared as `plan: free`, so no payment method is required. Do not put
+`{{SOMETHING}}` placeholders in `render.yml` — Render does not interpolate variables there; use
+`sync: false` instead, and never commit real keys.
+
+### Manual web service (alternative)
+
+1. Render → **New → Web Service**, connect the repo.
+2. Runtime: **Node** · Build: `npm install && npm run build` · Start: `npm run start`
+3. Add `GEMINI_API_KEY`, `MONGODB_URI`, and optionally `GEMMA_MODEL`.
 
 Notes:
+- `PORT` is injected by Render; `npm start` (`next start -p ${PORT:-3000}`) binds to it. Do not
+  hardcode `PORT` in the environment.
 - API routes declare `runtime = "nodejs"` — they need Node, not the edge runtime.
-- `/api/analyze` and `/api/ask` set `maxDuration = 60`; keep your plan's limits in mind for image
-  analysis latency.
+- `/api/analyze` and `/api/ask` set `maxDuration = 60`; free instances cold-start, so the first
+  analysis after idle can take noticeably longer.
 - No image storage is configured, so no object-storage credentials are required.
 
 ---
