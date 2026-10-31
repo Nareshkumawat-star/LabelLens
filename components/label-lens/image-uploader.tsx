@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { UploadCloud, Camera, X, Loader2, AlertCircle } from "lucide-react"
+import { UploadCloud, Camera, X, Loader2, AlertCircle, FileText, CheckCircle2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -45,12 +45,12 @@ export function ImageUploader({ onAnalyzed }: Props) {
 
   const accept = (candidate: File) => {
     if (!ALLOWED.includes(candidate.type)) {
-      setError("Unsupported format. Please use JPG, PNG or WEBP.")
+      setError("Unsupported format. Please select a JPG, PNG, or WEBP image.")
       setStatus("error")
       return
     }
     if (candidate.size > MAX_BYTES) {
-      setError(`That image is ${(candidate.size / 1024 / 1024).toFixed(2)} MB. The limit is 5 MB.`)
+      setError(`Image size is ${(candidate.size / 1024 / 1024).toFixed(2)} MB. The maximum allowed is 5 MB.`)
       setStatus("error")
       return
     }
@@ -107,22 +107,14 @@ export function ImageUploader({ onAnalyzed }: Props) {
       setFile(null)
       setPreviewFor(null)
     } catch {
-      setError("Network error. Check your connection and try again.")
+      setError("Network error while communicating with analysis service.")
       setStatus("error")
     }
   }
 
   return (
-    <Card className="border shadow-sm">
+    <Card className="border bg-card shadow-xs">
       <CardContent className="p-6 space-y-4">
-        <div>
-          <h2 className="text-lg font-bold">Upload a product label</h2>
-          <p className="text-xs text-muted-foreground">
-            JPG, PNG or WEBP · up to 5 MB. The photo is sent to the model for analysis and is not
-            stored.
-          </p>
-        </div>
-
         <input ref={fileInput} type="file" accept={ALLOWED.join(",")} className="hidden" onChange={onPick} />
         <input
           ref={cameraInput}
@@ -141,61 +133,78 @@ export function ImageUploader({ onAnalyzed }: Props) {
             }}
             onDragLeave={() => setDragging(false)}
             onDrop={onDrop}
-            className={`rounded-xl border-2 border-dashed p-10 text-center transition-colors ${
-              dragging ? "border-primary bg-primary/5" : "border-border"
+            className={`rounded-xl border border-dashed p-10 text-center transition-colors ${
+              dragging ? "border-primary bg-primary/5" : "border-border hover:border-muted-foreground/40 bg-muted/10"
             }`}
           >
-            <UploadCloud className="mx-auto h-9 w-9 text-muted-foreground" />
-            <p className="mt-3 text-sm font-medium">Drop your product image here</p>
-            <p className="text-xs text-muted-foreground">Upload a clear photo of the label</p>
-            <div className="mt-4 flex flex-wrap justify-center gap-2">
-              <Button size="sm" onClick={() => fileInput.current?.click()}>
-                <UploadCloud className="mr-2 h-4 w-4" /> Upload Image
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl border bg-background shadow-2xs">
+              <UploadCloud className="h-6 w-6 text-muted-foreground" />
+            </div>
+            <p className="mt-3 text-sm font-bold text-foreground">Drag and drop food label photo here</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Supports JPG, PNG, WEBP up to 5 MB · Ephemeral in-memory inspection
+            </p>
+            <div className="mt-5 flex flex-wrap justify-center gap-2.5">
+              <Button size="sm" onClick={() => fileInput.current?.click()} className="shadow-2xs">
+                <UploadCloud className="mr-2 h-4 w-4" /> Choose File
               </Button>
               <Button size="sm" variant="outline" onClick={() => cameraInput.current?.click()}>
-                <Camera className="mr-2 h-4 w-4" /> Take Photo
+                <Camera className="mr-2 h-4 w-4" /> Camera
               </Button>
             </div>
           </div>
         )}
 
         {preview && (
-          <div className="space-y-3">
-            {/* Blob preview — not a stored asset. */}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={preview}
-              alt="Selected label preview"
-              className="mx-auto max-h-64 rounded-lg border object-contain"
-            />
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="truncate text-xs text-muted-foreground">{file?.name}</span>
+          <div className="space-y-4">
+            <div className="relative mx-auto overflow-hidden rounded-xl border bg-muted/20 p-2 text-center max-w-md">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={preview}
+                alt="Selected label preview"
+                className="mx-auto max-h-72 rounded-lg object-contain"
+              />
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-3">
+              <div className="flex items-center gap-2 min-w-0">
+                <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+                <span className="truncate text-xs font-medium text-foreground">{file?.name}</span>
+                {file && (
+                  <span className="text-[11px] tabular-nums text-muted-foreground shrink-0">
+                    ({(file.size / 1024).toFixed(0)} KB)
+                  </span>
+                )}
+              </div>
               <div className="flex gap-2">
-                <Button size="sm" variant="ghost" onClick={() => fileInput.current?.click()}>
+                <Button size="sm" variant="ghost" className="h-8 text-xs" onClick={() => fileInput.current?.click()}>
                   Replace
                 </Button>
-                <Button size="sm" variant="ghost" onClick={reset}>
+                <Button size="sm" variant="ghost" className="h-8 text-xs text-muted-foreground hover:text-destructive" onClick={reset}>
                   <X className="mr-1 h-3.5 w-3.5" /> Remove
                 </Button>
               </div>
             </div>
-            <Button onClick={analyze} disabled={status === "analyzing"} className="w-full">
+            <Button
+              onClick={analyze}
+              disabled={status === "analyzing"}
+              className="w-full font-semibold shadow-xs"
+            >
               {status === "analyzing" ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Analyzing label…
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Analyzing Label with Gemma…
                 </>
               ) : (
-                "Analyze Product"
+                "Run Truth Mode Analysis"
               )}
             </Button>
           </div>
         )}
 
         {status === "error" && (
-          <div className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-sm">
+          <div className="flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm">
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
             <div className="space-y-2">
-              <p>{error}</p>
+              <p className="text-destructive font-medium">{error}</p>
               <Button size="sm" variant="outline" onClick={reset}>
                 Try again
               </Button>

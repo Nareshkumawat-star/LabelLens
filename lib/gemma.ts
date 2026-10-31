@@ -14,9 +14,14 @@ import { GoogleGenAI } from "@google/genai"
 
 const API_KEY = process.env.GEMINI_API_KEY
 const MODEL = (process.env.GEMMA_MODEL || "gemini-3.8-flash").trim()
+/**
+ * The model id the API actually serves for your key/region. The default below
+ * is what works today; if Google retires it, the startup validation will
+ * report the exact reason instead of a 404 deep in the call.
+ */
 const VALIDATION_CHAIN = process.env.GEMMA_MODEL_VALIDATION_CHAIN
   ? process.env.GEMMA_MODEL_VALIDATION_CHAIN.split(",").map((m) => m.trim()).filter(Boolean)
-  : ["gemini-3.8-flash", "gemini-2.0-flash", "gemini-2.5-flash"]
+  : ["gemini-3.8-flash"]
 
 let client: GoogleGenAI | null = null
 let modelIdValidated = false

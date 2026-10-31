@@ -14,12 +14,12 @@ export interface AccordionItemData {
 
 interface AccordionItemProps {
   item: AccordionItemData;
-
   setOpenId: (id: number | null) => void;
   index: number;
   total: number;
   openIndex: number;
 }
+
 interface AccordionProps {
   items?: AccordionItemData[];
   className?: string;
@@ -37,35 +37,35 @@ const DEFAULT_ITEMS: AccordionItemData[] = [
   {
     id: 1,
     title: 'What is Interaction Design?',
-    icon: <MousePointerClick className="size-3 -rotate-10 md:size-4" />,
+    icon: <MousePointerClick className="size-4 -rotate-10" />,
     content:
       'Interaction design focuses on creating engaging interfaces with well-thought-out behaviors and actions.',
   },
   {
     id: 2,
     title: 'Principles & Patterns',
-    icon: <Layers size={24} />,
+    icon: <Layers size={20} />,
     content:
       'Fundamental guidelines and repeated solutions that ensure consistency and usability in design.',
   },
   {
     id: 3,
     title: 'Usability & Accessibility',
-    icon: <Hand size={26} className="-rotate-20" />,
+    icon: <Hand size={20} className="-rotate-12" />,
     content:
       'Designing experiences that are easy to use and accessible to people of all abilities.',
   },
   {
     id: 4,
     title: 'Prototyping & Testing',
-    icon: <Send size={24} />,
+    icon: <Send size={20} />,
     content:
       'Rapid experimentation and validation of ideas through prototypes and real user testing.',
   },
   {
     id: 5,
     title: 'UX Optimisation',
-    icon: <Timer size={26} />,
+    icon: <Timer size={20} />,
     content:
       'Improving user experience by analyzing behavior and refining interactions over time.',
   },
@@ -104,27 +104,27 @@ const AccordionItem: FC<AccordionItemProps> = ({
   let borderBottomRightRadius = 0;
 
   if (isOpen || isAlone) {
-    borderTopLeftRadius = 20;
-    borderTopRightRadius = 20;
-    borderBottomLeftRadius = 20;
-    borderBottomRightRadius = 20;
+    borderTopLeftRadius = 14;
+    borderTopRightRadius = 14;
+    borderBottomLeftRadius = 14;
+    borderBottomRightRadius = 14;
   } else if (isBeforeOpen) {
-    borderBottomLeftRadius = 20;
-    borderBottomRightRadius = 20;
+    borderBottomLeftRadius = 14;
+    borderBottomRightRadius = 14;
   } else if (isAfterOpen) {
-    borderTopLeftRadius = 20;
-    borderTopRightRadius = 20;
+    borderTopLeftRadius = 14;
+    borderTopRightRadius = 14;
   } else if (isFirst) {
-    borderTopLeftRadius = 20;
-    borderTopRightRadius = 20;
+    borderTopLeftRadius = 14;
+    borderTopRightRadius = 14;
   } else if (isLast) {
-    borderBottomLeftRadius = 20;
-    borderBottomRightRadius = 20;
+    borderBottomLeftRadius = 14;
+    borderBottomRightRadius = 14;
   }
 
   return (
     <MotionConfig transition={springTransition}>
-      <motion.li layout>
+      <motion.li layout className="list-none">
         <motion.div
           animate={{
             borderTopLeftRadius,
@@ -132,7 +132,7 @@ const AccordionItem: FC<AccordionItemProps> = ({
             borderBottomLeftRadius,
             borderBottomRightRadius,
           }}
-          className="overflow-hidden border-solid border-zinc-200 bg-zinc-50 will-change-transform dark:border-zinc-800 dark:bg-zinc-900"
+          className="overflow-hidden border-solid border-border bg-card shadow-2xs will-change-transform"
           style={{
             borderTopWidth,
             borderBottomWidth,
@@ -144,18 +144,18 @@ const AccordionItem: FC<AccordionItemProps> = ({
         >
           <button
             onClick={() => setOpenId(isOpen ? null : item.id)}
-            className="flex w-full cursor-pointer items-center justify-between px-[12px] py-[10px]"
+            className="flex w-full cursor-pointer items-center justify-between px-4 py-3 text-left transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
           >
-            <div className="flex items-center gap-[12px]">
+            <div className="flex items-center gap-3">
               {item.icon}
 
-              <span className="text-sm font-bold text-[#272729] md:text-lg dark:text-zinc-100">
+              <span className="text-sm font-bold text-foreground sm:text-base">
                 {item.title}
               </span>
             </div>
 
             <motion.div animate={{ rotate: isOpen ? 180 : 0 }}>
-              <ChevronDown className="size-5 text-neutral-400 md:size-[1.625rem] dark:text-zinc-600" />
+              <ChevronDown className="size-5 text-muted-foreground shrink-0" />
             </motion.div>
           </button>
 
@@ -168,7 +168,7 @@ const AccordionItem: FC<AccordionItemProps> = ({
             className="overflow-hidden will-change-transform"
           >
             <div ref={ref}>
-              <div className="px-5 pb-5 text-xs font-medium text-[#545359] md:text-[18px] dark:text-zinc-400">
+              <div className="px-4 pb-4 pt-1 text-xs sm:text-sm font-normal text-muted-foreground leading-relaxed">
                 {item.content}
               </div>
             </div>
@@ -181,13 +181,11 @@ const AccordionItem: FC<AccordionItemProps> = ({
 
 export const AccordionApp: FC<AccordionProps> = ({ items, className, listClassName }) => {
   const defaultItems = items ?? DEFAULT_ITEMS;
-
   const [openId, setOpenId] = useState<number | null>(null);
-
   const openIndex = defaultItems.findIndex((item) => item.id === openId);
 
   return (
-    <div className={`flex w-full flex-col items-center justify-center transition-colors duration-500 ${className ?? 'p-6'}`}>
+    <div className={`flex w-full flex-col items-center justify-center transition-colors duration-300 ${className ?? 'p-6'}`}>
       <ul className={listClassName ?? 'w-full max-w-2xl'}>
         {defaultItems.map((item, index) => (
           <AccordionItem

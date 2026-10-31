@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { ScanLine, Sparkles, ShieldCheck, Zap } from "lucide-react"
+import { ScanLine, Sparkles, ShieldCheck, Cpu, ArrowUpRight } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { ImageUploader } from "@/components/label-lens/image-uploader"
@@ -22,56 +22,61 @@ export default function IndexPage() {
   }
 
   return (
-    <div className="container max-w-6xl space-y-10 py-8">
-      {/* Stylish Hero Header */}
-      <header className="relative space-y-4 border-b pb-8">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="space-y-2">
+    <div className="container max-w-6xl space-y-12 py-10">
+      {/* Hero Header */}
+      <header className="relative space-y-6 border-b pb-8">
+        <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
+          <div className="space-y-3">
             <div className="flex flex-wrap items-center gap-2.5">
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/80 text-xl font-black text-primary-foreground shadow-md shadow-primary/20">
+              <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-lg font-black text-primary-foreground shadow-xs">
                 L
               </span>
-              <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight bg-gradient-to-r from-foreground via-foreground/90 to-muted-foreground bg-clip-text">
+              <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-foreground">
                 LabelLens
               </h1>
-              <Badge variant="outline" className="text-xs font-semibold px-2.5 py-0.5 border-primary/30 bg-primary/5">
-                multimodal AI
+              <Badge variant="outline" className="text-xs font-semibold px-2.5 py-0.5 border-primary/25 bg-primary/5">
+                Multimodal AI
               </Badge>
-              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/25">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-600 dark:bg-emerald-400" />
                 Truth Mode Active
               </span>
             </div>
             <p className="max-w-2xl text-sm sm:text-base text-muted-foreground leading-relaxed">
-              Understand what&apos;s really inside your packaged food. Scan any label to separate printed ingredients,
-              AI explanations, and unverified information with zero guesswork.
+              Understand what is actually printed inside your packaged food. Scan any label to rigorously separate printed ingredients, AI explanations, and unverified data with zero guesswork.
             </p>
           </div>
 
-          <div className="hidden md:flex items-center gap-2">
-            <div className="rounded-xl border bg-card/60 p-3 shadow-xs text-right">
+          <div className="flex items-center gap-2.5 self-start shrink-0">
+            <div className="rounded-xl border bg-card p-3 shadow-xs text-right">
               <div className="text-[11px] font-medium text-muted-foreground">Detection Engine</div>
               <div className="text-sm font-bold text-foreground">Gemma Multimodal</div>
             </div>
-            <div className="rounded-xl border bg-card/60 p-3 shadow-xs text-right">
+            <div className="rounded-xl border bg-card p-3 shadow-xs text-right">
               <div className="text-[11px] font-medium text-muted-foreground">Image Retention</div>
-              <div className="text-sm font-bold text-emerald-600 dark:text-emerald-400">0% (In-Memory)</div>
+              <div className="text-sm font-bold tabular-nums text-emerald-700 dark:text-emerald-400">0% (In-Memory)</div>
             </div>
           </div>
         </div>
 
-        {/* Watermelon Animated Ticker & Feature Highlights */}
+        {/* Feature Ticker & Capability Highlights */}
         <StylishBanner />
       </header>
 
       {/* Upload Zone */}
       <section className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-bold tracking-tight text-foreground">Scan Product Label</h2>
+            <p className="text-xs text-muted-foreground">Upload or capture a clear photo of the nutrition and ingredient panels.</p>
+          </div>
+        </div>
         <ImageUploader onAnalyzed={onAnalyzed} />
       </section>
 
       {/* Analysis Results View */}
       {scan ? (
-        <section className="space-y-6">
+        <section className="space-y-6 animate-in fade-in-50 duration-300">
           <div className="grid gap-6 lg:grid-cols-3">
             <div className="space-y-6 lg:col-span-2">
               <ReportView report={scan.report} />
@@ -82,38 +87,37 @@ export default function IndexPage() {
           </div>
         </section>
       ) : (
-        <section className="rounded-2xl border border-dashed bg-muted/20 p-10 text-center transition-all">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-muted shadow-inner">
+        <section className="rounded-2xl border border-dashed bg-muted/20 p-12 text-center transition-colors">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-background border shadow-xs">
             <ScanLine className="h-6 w-6 text-muted-foreground" />
           </div>
-          <h3 className="mt-4 text-base font-semibold text-foreground">No label analyzed yet</h3>
+          <h3 className="mt-4 text-base font-bold text-foreground">No label analyzed yet</h3>
           <p className="mx-auto mt-1 max-w-md text-xs text-muted-foreground leading-relaxed">
-            Upload or photograph any food or beverage label above. The photo will be parsed by our
-            multimodal vision model and verified under Label Truth Mode.
+            Upload or photograph any food or beverage label above. The image will be parsed in-memory by Gemma and verified under Label Truth Mode.
           </p>
         </section>
       )}
 
-      {/* Watermelon Card-Split Accordion: Interactive FAQ & Verification Guide */}
+      {/* Watermelon Interactive FAQ & Verification Architecture */}
       <section className="pt-2">
         <WatermelonFaqAccordion />
       </section>
 
       {/* Scan History */}
-      <section>
+      <section className="pt-2">
         <ScanHistory refreshKey={refreshKey} />
       </section>
 
       {/* Footer */}
-      <footer className="flex flex-wrap items-center justify-between gap-4 border-t pt-6 text-xs text-muted-foreground">
+      <footer className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t pt-8 pb-4 text-xs text-muted-foreground">
         <div className="flex items-center gap-2">
-          <Sparkles className="h-3.5 w-3.5 text-primary" />
-          <span>
-            LabelLens is an informational tool. It is not medical advice, and it does not judge whether a product is safe or healthy.
-          </span>
+          <Sparkles className="h-4 w-4 text-primary shrink-0" />
+          <p>
+            LabelLens is an informational transparency tool. It does not provide medical diagnosis and does not classify products as healthy or unsafe.
+          </p>
         </div>
-        <div className="flex items-center gap-2 font-mono text-[11px]">
-          <span>Powered by Gemma + Watermelon UI</span>
+        <div className="flex items-center gap-3 shrink-0 font-medium">
+          <span className="font-mono text-[11px]">Powered by Gemma + Watermelon UI</span>
         </div>
       </footer>
     </div>
