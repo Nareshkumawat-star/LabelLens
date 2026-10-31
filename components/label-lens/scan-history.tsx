@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { History, Trash2, Loader2, ArrowRight, Tag } from "lucide-react"
+import { History, Trash2, Loader2, ArrowRight, Eye, ChevronDown, ChevronUp } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -17,10 +17,17 @@ interface ScanSummary {
   summary: string
 }
 
-export function ScanHistory({ refreshKey = 0 }: { refreshKey?: number }) {
+interface ScanHistoryProps {
+  refreshKey?: number
+  onSelectScan?: (id: string) => void
+  activeScanId?: string | null
+}
+
+export function ScanHistory({ refreshKey = 0, onSelectScan, activeScanId }: ScanHistoryProps) {
   const [scans, setScans] = React.useState<ScanSummary[] | null>(null)
   const [error, setError] = React.useState<string | null>(null)
   const [busyId, setBusyId] = React.useState<string | null>(null)
+  const [showAll, setShowAll] = React.useState(false)
 
   React.useEffect(() => {
     let cancelled = false
@@ -49,7 +56,8 @@ export function ScanHistory({ refreshKey = 0 }: { refreshKey?: number }) {
     }
   }, [refreshKey])
 
-  const remove = async (id: string) => {
+  const remove = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation()
     setBusyId(id)
     try {
       const res = await fetch(`/api/scans/${id}`, { method: "DELETE" })
@@ -59,73 +67,103 @@ export function ScanHistory({ refreshKey = 0 }: { refreshKey?: number }) {
     }
   }
 
+  const displayedScans = scans ? (showAll ? scans : scans.slice(0, 3)) : []
+
   return (
     <Card className="border bg-card shadow-xs">
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2 text-lg font-bold">
-            <History className="h-5 w-5 text-primary shrink-0" />
-            <span>Scan History</span>
-          </CardTitle>
-          {scans && scans.length > 0 && (
-            <span className="text-xs font-semibold tabular-nums text-muted-foreground">
-              {scans.length} {scans.length === 1 ? "record" : "records"}
-            </span>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <History className="h-4 w-4 shrink-0" />
+            </div>
+            <CardTitle className="text-base font-bold">Recent Food Scans</CardTitle>
+            {scans && scans.length > 0 && (
+              <Badge variant="secondary" className="text-[11px] font-semibold tabular-nums">
+                {scans.length} {scans.length === 1 ? "scan" : "scans"}
+              </Badge>
+            )}
+          </div>
+
+          {scans && scans.length > 3 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowAll((prev) => !prev)}
+              className="h-8 text-xs font-semibold text-muted-foreground hover:text-foreground"
+            >
+              {showAll ? (
+                <>
+                  Show Less <ChevronUp className="ml-1 h-3.5 w-3.5" />
+                </>
+              ) : (
+                <>
+                  View All ({scans.length}) <ChevronDown className="ml-1 h-3.5 w-3.5" />
+                </>
+              )}
+            </Button>
           )}
         </div>
         <p className="text-xs text-muted-foreground leading-relaxed">
-          Stored locally for demo inspection. Unauthenticated session memory.
+          Quickly review or re-inspect previously analyzed food labels.
         </p>
       </CardHeader>
       <CardContent className="space-y-2">
         {scans === null && (
-          <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
+          <div className="flex items-center justify-center gap-2 py-6 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin text-primary" />
-            <span>Retrieving scan log…</span>
+            <span>Loading recent scan history…</span>
           </div>
         )}
 
         {error && (
-          <p className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+          <p className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-xs text-destructive">
             {error}
           </p>
         )}
 
         {scans !== null && scans.length === 0 && !error && (
-          <div className="rounded-xl border border-dashed p-8 text-center">
-            <History className="mx-auto h-8 w-8 text-muted-foreground/60" />
-            <p className="mt-2 text-sm font-semibold text-foreground">No recent scans</p>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Completed label analyses will be cataloged here for quick review.
+          <div className="rounded-xl border border-dashed p-6 text-center">
+            <p className="text-xs font-semibold text-foreground">No food scans recorded yet</p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">
+              Upload or snap a product label below to see your first verified report here.
             </p>
           </div>
         )}
 
         {scans && scans.length > 0 && (
-          <div className="divide-y rounded-xl border overflow-hidden">
-            {scans.map((s) => (
-              <div
-                key={s.id}
-                className="flex items-center justify-between gap-3 p-3.5 hover:bg-muted/30 transition-colors"
-              >
-                <div className="min-w-0 space-y-1">
-                  <div className="flex items-center gap-2">
-                    <Link
-                      href={`/scan/${s.id}`}
-                      className="truncate text-sm font-bold text-foreground hover:underline"
-                    >
-                      {s.productName ?? "Unnamed Product"}
-                    </Link>
-                    {s.category && (
-                      <Badge variant="outline" className="text-[10px] capitalize shrink-0">
-                        {s.category}
-                      </Badge>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {displayedScans.map((s) => {
+              const isActive = activeScanId === s.id
+              return (
+                <div
+                  key={s.id}
+                  onClick={() => onSelectScan?.(s.id)}
+                  className={`group relative flex flex-col justify-between rounded-xl border p-3.5 text-left transition-all ${
+                    onSelectScan ? "cursor-pointer hover:border-primary/40 hover:shadow-xs" : ""
+                  } ${isActive ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "bg-card hover:bg-muted/20"}`}
+                >
+                  <div className="space-y-1.5">
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="font-bold text-sm text-foreground line-clamp-1 group-hover:text-primary transition-colors">
+                        {s.productName ?? "Unnamed Food"}
+                      </span>
+                      {s.category && (
+                        <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold capitalize text-muted-foreground">
+                          {s.category}
+                        </span>
+                      )}
+                    </div>
+                    {s.brand && (
+                      <p className="text-xs font-medium text-muted-foreground line-clamp-1">{s.brand}</p>
                     )}
+                    <p className="text-[11px] text-muted-foreground/80 line-clamp-2 leading-relaxed">
+                      {s.summary}
+                    </p>
                   </div>
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                    {s.brand && <span className="font-medium text-foreground/80">{s.brand}</span>}
-                    {s.brand && <span>·</span>}
-                    <time className="tabular-nums">
+
+                  <div className="mt-3 flex items-center justify-between border-t pt-2.5 text-[11px]">
+                    <time className="tabular-nums text-muted-foreground">
                       {new Date(s.createdAt).toLocaleDateString(undefined, {
                         month: "short",
                         day: "numeric",
@@ -133,32 +171,37 @@ export function ScanHistory({ refreshKey = 0 }: { refreshKey?: number }) {
                         minute: "2-digit",
                       })}
                     </time>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        asChild
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 px-2 text-[11px] font-semibold"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Link href={`/scan/${s.id}`}>
+                          Inspect <ArrowRight className="ml-1 h-3 w-3" />
+                        </Link>
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        aria-label="Delete scan"
+                        disabled={busyId === s.id}
+                        onClick={(e) => void remove(e, s.id)}
+                        className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                      >
+                        {busyId === s.id ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-3.5 w-3.5" />
+                        )}
+                      </Button>
+                    </div>
                   </div>
                 </div>
-
-                <div className="flex items-center gap-1 shrink-0">
-                  <Button asChild size="sm" variant="ghost" className="h-8 px-2 text-xs">
-                    <Link href={`/scan/${s.id}`}>
-                      View <ArrowRight className="ml-1 h-3.5 w-3.5" />
-                    </Link>
-                  </Button>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    aria-label="Delete scan"
-                    disabled={busyId === s.id}
-                    onClick={() => void remove(s.id)}
-                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                  >
-                    {busyId === s.id ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <Trash2 className="h-3.5 w-3.5" />
-                    )}
-                  </Button>
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </CardContent>
