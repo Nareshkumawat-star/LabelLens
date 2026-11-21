@@ -2,45 +2,40 @@
 /**
  * Scheduled maintainer automation.
  *
- * One run:
- *   1. Reads recent history so it does not repeat itself.
- *   2. Asks a model for ONE small, self-contained improvement.
- *   3. Opens an issue describing it.
- *   4. Commits the change on a branch and opens a DRAFT pull request that closes the issue.
+ * One run, over every repo listed in config.repos:
+ *   1. Reads that repo's tree, README, recent issues and recent commits.
+ *   2. Skips the repo cleanly when it already has an equivalent open automation
+ *      issue, or when it is at its open automation PR cap.
+ *   3. Asks a model for ONE small, self-contained improvement.
+ *   4. Opens an issue, commits to a branch, opens a DRAFT pull request that closes it.
+ *
+ * A failure in one repo is logged and the loop continues. The process exits
+ * non-zero only if every attempted repo failed.
  *
  * Everything the model returns is untrusted input: file paths are checked against the
  * real repository tree, protected paths are refused, and size limits are enforced.
- * The PR is always a draft so a human decides what merges.
+ * Pull requests are always drafts so a human decides what merges.
  */
 
 import { readFile } from "node:fs/promises";
 
-const GH = "https://api.github.com";
-const REPO = process.env.GITHUB_REPOSITORY;
-const TOKEN = process.env.GITHUB_TOKEN;
+const GH = process.env.GITHUB_API_URL || "https://api.github.com";
+const TOKEN = process.env.AUTOMATION_TOKEN || process.env.GITHUB_TOKEN;
 const LLM_KEY = process.env.OPENAI_API_KEY;
 const LLM_BASE = process.env.OPENAI_BASE_URL || "https://freebuff.com/api/v1/paid";
 const MODEL = process.env.AUTOMATION_MODEL || "gpt-4.1-mini";
 const DRY_RUN = String(process.env.DRY_RUN || "").toLowerCase() === "true";
+const SELF_REPO = process.env.GITHUB_REPOSITORY;
 
 const log = (...a) => console.log("[auto]", ...a);
+const logFor = (repo, ...a) => console.log(`[auto] ${repo} ::`, ...a);
 
-function fail(msg) {
-  console.error("[auto] " + msg);
-  process.exit(1);
-}
-
-function skip(msg) {
-  log(msg);
-  log("nothing to do; exiting cleanly");
-  process.exit(0);
-}
-
-async function gh(path, { method = "GET", body } = {}) {
-  const res = await fetch(GH + path, {
+/** GitHub API call. `repo` scopes the call so the log can name the repo. */
+async function gh(repo, path, { method = "GET", body, raw = false } = {}) {
+  const res = await fetch(`${GH}/repos/${repo}${path}`, {
     method,
     headers: {
-      Accept: "application/vnd.github+json",
+      Accept: raw ? "application/vnd.github.raw" : "application/vnd.github+json",
       Authorization: `Bearer ${TOKEN}`,
       "X-GitHub-Api-Version": "2022-11-28",
       "Content-Type": "application/json",
@@ -49,25 +44,24 @@ async function gh(path, { method = "GET", body } = {}) {
     body: body === undefined ? undefined : JSON.stringify(body),
   });
   const text = await res.text();
-  let data = null;
-  try {
-    data = text ? JSON.parse(text) : null;
-  } catch {
-    data = text;
-  }
   if (!res.ok) {
-    throw new Error(`${method} ${path} -> ${res.status} ${JSON.stringify(data).slice(0, 400)}`);
+    throw new Error(`${method} ${repo}${path} -> ${res.status} ${String(text).slice(0, 300)}`);
   }
-  return data;
+  if (raw) return text;
+  try {
+    return text ? JSON.parse(text) : null;
+  } catch {
+    return text;
+  }
 }
 
 /** Recursively list blob paths, capped so the prompt stays small. */
-async function listTree(sha, limit = 400) {
+async function listTree(repo, sha, limit = 400) {
   const out = [];
   const seen = new Set();
   const queue = [sha];
   while (queue.length && out.length < limit) {
-    const tree = await gh(`/repos/${REPO}/git/trees/${queue.shift()}?recursive=0`);
+    const tree = await gh(repo, `/git/trees/${queue.shift()}?recursive=0`);
     for (const e of tree.tree || []) {
       if (e.type === "tree") {
         if (!seen.has(e.sha) && !/^(node_modules|\.next|dist|build|out)$/.test(e.path)) {
@@ -83,22 +77,24 @@ async function listTree(sha, limit = 400) {
   return out;
 }
 
-async function readText(path, ref) {
-  const res = await fetch(`${GH}/repos/${REPO}/contents/${path}?ref=${ref}`, {
-    headers: {
-      Accept: "application/vnd.github.raw",
-      Authorization: `Bearer ${TOKEN}`,
-      "User-Agent": "auto-improve",
-    },
-  });
-  if (!res.ok) return null;
-  const text = await res.text();
-  return text.length > 20000 ? text.slice(0, 20000) : text;
+async function readText(repo, path, ref) {
+  try {
+    const text = await gh(repo, `/contents/${path}?ref=${ref}`, { raw: true });
+    return text.length > 20000 ? text.slice(0, 20000) : text;
+  } catch {
+    return null;
+  }
 }
 
 function isProtected(p, patterns) {
   return patterns.some((rule) => (rule.endsWith("/") ? p.startsWith(rule) : p === rule));
 }
+
+const normalizeTitle = (s) =>
+  String(s)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
 
 async function askModel(prompt) {
   const res = await fetch(`${LLM_BASE}/chat/completions`, {
@@ -121,7 +117,7 @@ async function askModel(prompt) {
       ],
     }),
   });
-  if (!res.ok) throw new Error(`model call failed: ${res.status} ${(await res.text()).slice(0, 300)}`);
+  if (!res.ok) throw new Error(`model call failed: ${res.status} ${(await res.text()).slice(0, 200)}`);
   const json = await res.json();
   const raw = json?.choices?.[0]?.message?.content;
   if (!raw) throw new Error("model returned no content");
@@ -151,41 +147,34 @@ function validate(plan, tree, cfg) {
   return { title, body: body || title, files };
 }
 
-async function main() {
-  if (!REPO) fail("GITHUB_REPOSITORY is not set");
-  if (!TOKEN) fail("GITHUB_TOKEN is not set");
-
-  const cfg = JSON.parse(await readFile(new URL("./config.json", import.meta.url), "utf8"));
-  if (!cfg.enabled) skip("config.enabled is false");
-
-  if (!LLM_KEY) {
-    log("OPENAI_API_KEY is not set — add it under Settings > Secrets > Actions to turn this on.");
-    log("exiting without changes.");
-    return;
-  }
-
-  const [owner, repo] = REPO.split("/");
-  const meta = await gh(`/repos/${REPO}`);
+/**
+ * Handle one repository.
+ * Returns { repo, outcome: "opened" | "skipped" | "failed", detail }.
+ * Throws only on unexpected errors; the caller treats a throw as "failed".
+ */
+async function processRepo(repo, cfg) {
+  const meta = await gh(repo, "");
   const base = meta.default_branch;
-  const headSha = (await gh(`/repos/${REPO}/git/ref/heads/${base}`)).object.sha;
+  const headSha = (await gh(repo, `/git/ref/heads/${base}`)).object.sha;
 
-  // Guardrail: don't pile up unattended PRs.
-  const openPrs = await gh(`/repos/${REPO}/pulls?state=open&per_page=100`);
+  // Guardrail: don't pile up unattended PRs in this repo.
+  const openPrs = await gh(repo, "/pulls?state=open&per_page=100");
   const mine = openPrs.filter((p) => (p.labels || []).some((l) => l.name === cfg.label));
   if (mine.length >= cfg.maxOpenAutomationPrs) {
-    skip(`${mine.length} automation PR(s) already open (limit ${cfg.maxOpenAutomationPrs})`);
+    logFor(repo, `skipped: ${mine.length} automation PR(s) already open (limit ${cfg.maxOpenAutomationPrs})`);
+    return { repo, outcome: "skipped", detail: "open automation PR cap reached" };
   }
 
-  const tree = await listTree(headSha);
-  const readme = (await readText("README.md", base)) || "";
-  const recentIssues = await gh(`/repos/${REPO}/issues?state=all&per_page=20`);
-  const recentTitles = recentIssues.map((i) => `- ${i.title}`).join("\n");
-  const recentCommits = (await gh(`/repos/${REPO}/commits?per_page=15`))
+  const tree = await listTree(repo, headSha);
+  const readme = (await readText(repo, "README.md", base)) || "";
+  const allIssues = await gh(repo, "/issues?state=all&per_page=20");
+  const recentTitles = allIssues.map((i) => `- ${i.title}`).join("\n");
+  const recentCommits = (await gh(repo, "/commits?per_page=15"))
     .map((c) => `- ${c.commit.message.split("\n")[0]}`)
     .join("\n");
 
   const prompt = [
-    `Repository: ${REPO}`,
+    `Repository: ${repo}`,
     `Default branch: ${base}`,
     "",
     "README (truncated):",
@@ -207,28 +196,35 @@ async function main() {
     `- at most ${cfg.maxFilesPerPr} files, keep the change small.`,
   ].join("\n");
 
-  log(`asking ${MODEL} for one improvement in ${REPO}`);
+  logFor(repo, `asking ${MODEL} for one improvement`);
   const plan = validate(await askModel(prompt), tree, cfg);
-  log(`plan: ${plan.title}`);
+  logFor(repo, `plan: ${plan.title}`);
+
+  // Dedupe: an equivalent open automation issue means we already have this queued.
+  const openSame = (await gh(repo, `/issues?state=open&labels=${encodeURIComponent(cfg.label)}&per_page=100`)).some(
+    (i) => normalizeTitle(i.title) === normalizeTitle(plan.title),
+  );
+  if (openSame) {
+    logFor(repo, "skipped: an equivalent automation issue is already open");
+    return { repo, outcome: "skipped", detail: "equivalent open issue" };
+  }
 
   if (DRY_RUN) {
-    log("DRY_RUN=true — not writing anything. Plan follows:");
-    console.log(JSON.stringify(plan, null, 2).slice(0, 4000));
-    return;
+    logFor(repo, "dry run — not writing. Plan:");
+    console.log(JSON.stringify(plan, null, 2).slice(0, 3000));
+    return { repo, outcome: "skipped", detail: "dry run" };
   }
 
   // 1. Issue first, so the PR can close it.
-  const issue = await gh(`/repos/${REPO}/issues`, {
+  const issue = await gh(repo, "/issues", {
     method: "POST",
     body: {
       title: plan.title,
-      body:
-        plan.body +
-        "\n\n---\n_Opened by the scheduled maintainer automation. A draft PR follows._",
+      body: plan.body + "\n\n---\n_Opened by the scheduled maintainer automation. A draft PR follows._",
       labels: [cfg.label],
     },
   });
-  log(`issue #${issue.number} created: ${issue.html_url}`);
+  logFor(repo, `issue #${issue.number} created: ${issue.html_url}`);
 
   // 2. Branch + commit.
   const slug = plan.title
@@ -240,32 +236,28 @@ async function main() {
 
   const blobs = [];
   for (const f of plan.files) {
-    const b = await gh(`/repos/${REPO}/git/blobs`, {
+    const b = await gh(repo, "/git/blobs", {
       method: "POST",
       body: { content: f.content, encoding: "utf-8" },
     });
     blobs.push({ path: f.path, sha: b.sha, mode: "100644", type: "blob" });
   }
-  const newTree = await gh(`/repos/${REPO}/git/trees`, {
+  const newTree = await gh(repo, "/git/trees", {
     method: "POST",
     body: { base_tree: headSha, tree: blobs },
   });
-  const commit = await gh(`/repos/${REPO}/git/commits`, {
+  const commit = await gh(repo, "/git/commits", {
     method: "POST",
-    body: {
-      message: `${plan.title}\n\nCloses #${issue.number}`,
-      tree: newTree.sha,
-      parents: [headSha],
-    },
+    body: { message: `${plan.title}\n\nCloses #${issue.number}`, tree: newTree.sha, parents: [headSha] },
   });
-  await gh(`/repos/${REPO}/git/refs`, {
+  await gh(repo, "/git/refs", {
     method: "POST",
     body: { ref: `refs/heads/${branch}`, sha: commit.sha },
   });
-  log(`branch ${branch} pushed`);
+  logFor(repo, `branch ${branch} pushed`);
 
   // 3. Draft PR — a human still decides.
-  const pr = await gh(`/repos/${REPO}/pulls`, {
+  const pr = await gh(repo, "/pulls", {
     method: "POST",
     body: {
       title: plan.title,
@@ -278,7 +270,87 @@ async function main() {
         `Review before merging._`,
     },
   });
-  log(`PR #${pr.number} opened: ${pr.html_url}`);
+  logFor(repo, `draft PR #${pr.number} opened: ${pr.html_url}`);
+  return { repo, outcome: "opened", detail: `issue #${issue.number}, PR #${pr.number}` };
 }
 
-main().catch((err) => fail(err.stack || String(err)));
+/** config.repos, or the repo the workflow runs in when the list is empty/missing. */
+function resolveTargets(cfg) {
+  const raw = Array.isArray(cfg.repos) ? cfg.repos : [];
+  const cleaned = raw
+    .map((r) => String(r || "").trim())
+    .filter(Boolean)
+    .filter((r) => {
+      const ok = /^[\w.-]+\/[\w.-]+$/.test(r);
+      if (!ok) log(`ignoring malformed repo entry: ${JSON.stringify(r)} (expected "owner/name")`);
+      return ok;
+    });
+
+  const list = cleaned.length ? cleaned : SELF_REPO ? [SELF_REPO] : [];
+  if (!cleaned.length) {
+    if (SELF_REPO) log(`config.repos is empty — falling back to this repository (${SELF_REPO})`);
+    else log("config.repos is empty and GITHUB_REPOSITORY is unset — nothing to do");
+  }
+
+  const unique = [...new Set(list)];
+  const cap = Number(cfg.maxReposPerRun) > 0 ? Number(cfg.maxReposPerRun) : unique.length;
+  if (unique.length > cap) log(`capping run to ${cap} of ${unique.length} repo(s) (maxReposPerRun)`);
+  return unique.slice(0, cap);
+}
+
+async function main() {
+  if (!TOKEN) {
+    console.error("[auto] no token: set AUTOMATION_TOKEN or GITHUB_TOKEN");
+    process.exit(1);
+  }
+
+  const cfgFile = process.env.AUTOMATION_CONFIG || new URL("./config.json", import.meta.url);
+  const cfg = JSON.parse(await readFile(cfgFile, "utf8"));
+  if (!cfg.enabled) {
+    log("config.enabled is false — nothing to do");
+    return;
+  }
+
+  if (!LLM_KEY) {
+    log("OPENAI_API_KEY is not set — add it under Settings > Secrets > Actions to turn this on.");
+    log("exiting without changes.");
+    return;
+  }
+
+  const targets = resolveTargets(cfg);
+  if (!targets.length) {
+    log("no repositories to process — exiting");
+    return;
+  }
+
+  log(`run starting over ${targets.length} repo(s): ${targets.join(", ")}`);
+
+  const results = [];
+  for (const repo of targets) {
+    try {
+      results.push(await processRepo(repo, cfg));
+    } catch (err) {
+      const detail = err.message || String(err);
+      logFor(repo, `FAILED — ${detail}`);
+      results.push({ repo, outcome: "failed", detail });
+    }
+  }
+
+  const opened = results.filter((r) => r.outcome === "opened");
+  const skipped = results.filter((r) => r.outcome === "skipped");
+  const failed = results.filter((r) => r.outcome === "failed");
+
+  log("─".repeat(50));
+  log(`summary: ${opened.length} opened, ${skipped.length} skipped, ${failed.length} failed`);
+  for (const r of results) log(`  ${r.outcome.padEnd(7)} ${r.repo} — ${r.detail}`);
+
+  if (failed.length && failed.length === results.length) {
+    console.error("[auto] every repository failed");
+    process.exit(1);
+  }
+}
+
+main().catch((err) => {
+  console.error("[auto] " + (err.stack || String(err)));
+  process.exit(1);
+});

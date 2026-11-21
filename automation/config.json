@@ -1,6 +1,8 @@
 {
   "enabled": true,
+  "repos": ["Nareshkumawat-star/LabelLens"],
   "label": "automation",
+  "maxReposPerRun": 3,
   "maxOpenAutomationPrs": 3,
   "maxFilesPerPr": 3,
   "maxDiffLines": 200,
