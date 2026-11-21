@@ -1,0 +1,16 @@
+{
+  "enabled": true,
+  "label": "automation",
+  "maxOpenAutomationPrs": 3,
+  "maxFilesPerPr": 3,
+  "maxDiffLines": 200,
+  "protectedPaths": [
+    ".github/",
+    ".env",
+    ".env.local",
+    "automation/",
+    "package-lock.json",
+    "pnpm-lock.yaml",
+    "yarn.lock"
+  ]
+}
